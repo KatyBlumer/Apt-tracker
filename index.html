@@ -4,17 +4,18 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>The Hunt — Apartment Tracker</title>
-<link id="leaflet-css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <style>
-  :root{--ink:#1a1a1a;--paper:#f4f1ea;--accent:#e07a5f;--line:#dcd6c8;--card:#fffdf8;}
+  :root{--ink:#1a1a1a;--paper:#f4f1ea;--accent:#e07a5f;--line:#dcd6c8;}
   *{box-sizing:border-box;}
   body{margin:0;font-family:Georgia,'Times New Roman',serif;background:var(--paper);color:var(--ink);}
-  #root{max-width:1300px;margin:0 auto;padding:24px 28px;}
+  #root{max-width:1400px;margin:0 auto;padding:24px 28px;}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)!important;}
   tr:hover{background:rgba(224,122,95,.05);}
   .leaflet-container{font-family:Georgia,serif;}
   a{text-decoration:none;}
   button{font-family:inherit;}
+  td div[title="Click to edit"]:hover{border-color:#dcd6c8!important;background:rgba(224,122,95,.04);}
 </style>
 </head>
 <body>
@@ -38,22 +39,13 @@
     messagingSenderId: "636926285570",
     appId: "1:636926285570:web:07bb863c19a7f8a4c5541b",
   };
-
   const db = getFirestore(initializeApp(firebaseConfig));
   window.FB = {
-    subscribe(pass, cb) {
-      return onSnapshot(collection(db,"hunts",pass,"listings"),
-        snap=>{ const items=[]; snap.forEach(d=>items.push({id:d.id,...d.data()})); cb(items); },
-        err=>console.error("subscribe error",err));
-    },
-    subscribeMeta(pass, cb) {
-      return onSnapshot(doc(db,"hunts",pass,"meta","config"),
-        d=>cb(d.exists()?d.data():null),
-        err=>console.error("meta error",err));
-    },
-    async saveListing(pass, l)  { await setDoc(doc(db,"hunts",pass,"listings",l.id), l); },
-    async deleteListing(pass,id){ await deleteDoc(doc(db,"hunts",pass,"listings",id)); },
-    async saveMeta(pass, meta)  { await setDoc(doc(db,"hunts",pass,"meta","config"), meta, {merge:true}); },
+    subscribe(pass,cb)      { return onSnapshot(collection(db,"hunts",pass,"listings"),snap=>{const items=[];snap.forEach(d=>items.push({id:d.id,...d.data()}));cb(items);},err=>console.error(err)); },
+    subscribeMeta(pass,cb)  { return onSnapshot(doc(db,"hunts",pass,"meta","config"),d=>cb(d.exists()?d.data():null),err=>console.error(err)); },
+    async saveListing(p,l)  { await setDoc(doc(db,"hunts",p,"listings",l.id),l); },
+    async deleteListing(p,id){ await deleteDoc(doc(db,"hunts",p,"listings",id)); },
+    async saveMeta(p,m)     { await setDoc(doc(db,"hunts",p,"meta","config"),m,{merge:true}); },
   };
   window.dispatchEvent(new Event("fb-ready"));
 </script>
@@ -65,7 +57,6 @@ const DEFAULT_ANCHORS = {
   bike:  { label:"Simon — 3105 Patrick Henry Dr", lat:37.3845, lng:-121.9755, radiusMi:3.5,  color:"#e07a5f" },
   drive: { label:"Katy — Google MTV",             lat:37.422,  lng:-122.0841, radiusMi:13,   color:"#3d5a80" },
 };
-
 const STATUSES = [
   { key:"new",       label:"New",       color:"#8d99ae" },
   { key:"contacted", label:"Contacted", color:"#e9c46a" },
@@ -74,55 +65,110 @@ const STATUSES = [
   { key:"favorite",  label:"Favorite",  color:"#e07a5f" },
   { key:"rejected",  label:"Rejected",  color:"#bc4749" },
 ];
-
+const YN_FIELDS = ["pets","parking","laundry","furnished","ac","housemates"];
 const PASS_KEY = "apt-hunt-pass";
 
 function distMi(a,b) {
-  if (a.lat==null||b.lat==null) return null;
-  const R=3958.8, rad=d=>d*Math.PI/180;
-  const dLat=rad(b.lat-a.lat), dLng=rad(b.lng-a.lng);
+  if(a.lat==null||b.lat==null)return null;
+  const R=3958.8,rad=d=>d*Math.PI/180;
+  const dLat=rad(b.lat-a.lat),dLng=rad(b.lng-a.lng);
   const x=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
-
-async function geocode(address) {
-  const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`,{headers:{"Accept-Language":"en"}});
-  const d = await res.json();
-  if (!d.length) return null;
-  return { lat:parseFloat(d[0].lat), lng:parseFloat(d[0].lon) };
+async function geocode(addr){
+  const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(addr)}`,{headers:{"Accept-Language":"en"}});
+  const d=await r.json();return d.length?{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)}:null;
 }
-
-async function parseListing(text) {
-  const res = await fetch("https://api.anthropic.com/v1/messages",{
+async function parseListing(text){
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,
-      messages:[{role:"user",content:`Extract apartment listing fields. Respond ONLY with a JSON object, no markdown. Keys: title, address, price (number only), beds, baths, sqft, pets, parking, laundry, notes. Use "" for anything not found.\n\nLISTING:\n${text}`}]}),
+      messages:[{role:"user",content:`Extract apartment listing fields. Respond ONLY with a JSON object, no markdown. Keys: title, address, price (number only), beds, baths, sqft, pets, parking, laundry, furnished, ac, housemates, notes. Use "" for anything not found.\n\nLISTING:\n${text}`}]}),
   });
   const data=await res.json();
   const raw=data.content.filter(c=>c.type==="text").map(c=>c.text).join("");
   return JSON.parse(raw.replace(/```json|```/g,"").trim());
 }
 
-const blankDraft = () => ({
-  id:null,url:"",title:"",address:"",addressCertain:false,
-  price:"",beds:"",baths:"",sqft:"",pets:"",parking:"",
-  laundry:"",status:"new",notes:"",lat:null,lng:null
-});
-
-function App() {
-  const [pass, setPass]           = useState(()=>localStorage.getItem(PASS_KEY)||"");
-  const [authed, setAuthed]       = useState(false);
-  const [passInput, setPassInput] = useState("");
-  if (!authed) return <Gate value={passInput} onChange={setPassInput} onEnter={()=>{if(passInput.trim()){localStorage.setItem(PASS_KEY,passInput.trim());setPass(passInput.trim());setAuthed(true);}}}/>;
-  return <Hunt pass={pass} onLogout={()=>{localStorage.removeItem(PASS_KEY);setAuthed(false);setPassInput("");}} />;
+function ynStyle(val){
+  if(!val)return{};
+  const v=String(val).trim().toUpperCase();
+  if(v.startsWith("Y"))return{background:"#e8f5e9",color:"#2e7d32",borderRadius:3,padding:"1px 5px",display:"inline-block"};
+  if(v.startsWith("N"))return{background:"#ffebee",color:"#c62828",borderRadius:3,padding:"1px 5px",display:"inline-block"};
+  if(v.startsWith("?"))return{background:"#fff8e1",color:"#f57f17",borderRadius:3,padding:"1px 5px",display:"inline-block"};
+  return{};
+}
+function ynHtml(val){
+  if(!val)return`<span style="color:#aaa">—</span>`;
+  const v=String(val).trim().toUpperCase();
+  let bg="",col="#555";
+  if(v.startsWith("Y")){bg="background:#e8f5e9;";col="#2e7d32";}
+  else if(v.startsWith("N")){bg="background:#ffebee;";col="#c62828";}
+  else if(v.startsWith("?")){bg="background:#fff8e1;";col="#f57f17";}
+  return`<span style="${bg}color:${col};border-radius:3px;padding:1px 4px">${val}</span>`;
+}
+function listingRadius(l){
+  const rs=[l.katyRating,l.simonRating].map(Number).filter(r=>r>=1&&r<=5);
+  if(!rs.length)return 9;
+  return 7+((rs.reduce((a,b)=>a+b,0)/rs.length)-1)*2;
 }
 
-function Gate({value,onChange,onEnter}) {
-  return (
+function EditableCell({value,onSave,placeholder="click to add…"}){
+  const [editing,setEditing]=useState(false);
+  const [val,setVal]=useState(value||"");
+  const ref=useRef(null);
+  useEffect(()=>{if(editing&&ref.current)ref.current.focus();},[editing]);
+  useEffect(()=>{setVal(value||"");},[value]);
+  if(!editing)return(
+    <div onClick={()=>setEditing(true)} style={EC.view} title="Click to edit">
+      {value?<span style={{whiteSpace:"pre-wrap"}}>{value}</span>:<span style={EC.ph}>{placeholder}</span>}
+    </div>
+  );
+  return(<textarea ref={ref} value={val} onChange={e=>setVal(e.target.value)}
+    onBlur={()=>{onSave(val);setEditing(false);}}
+    onKeyDown={e=>{if(e.key==="Escape"){setVal(value||"");setEditing(false);}}}
+    style={EC.ta}/>);
+}
+const EC={
+  view:{cursor:"text",minHeight:24,fontSize:12,color:"#444",padding:"2px 4px",borderRadius:3,border:"1px solid transparent",lineHeight:1.5},
+  ph:{color:"#ccc",fontStyle:"italic"},
+  ta:{width:"100%",minHeight:64,resize:"vertical",fontFamily:"Georgia,serif",fontSize:12,border:"1.5px solid #e07a5f",borderRadius:3,padding:"4px 6px",background:"#fffef9",color:"#1a1a1a",lineHeight:1.5},
+};
+
+const S_in={padding:"8px 10px",border:"1.5px solid #dcd6c8",borderRadius:3,fontSize:13,fontFamily:"inherit",background:"#fff",color:"#1a1a1a"};
+function StarSelect({value,onChange,label}){
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:3}}>
+      <label style={{fontSize:11,color:"#8a8276",textTransform:"uppercase",letterSpacing:".04em"}}>{label}</label>
+      <select value={value||""} onChange={e=>onChange(e.target.value)} style={S_in}>
+        <option value="">—</option>
+        {[1,2,3,4,5].map(n=><option key={n} value={n}>{"★".repeat(n)}</option>)}
+      </select>
+    </div>
+  );
+}
+
+const blankDraft=()=>({
+  id:null,url:"",title:"",address:"",addressCertain:false,
+  price:"",beds:"",baths:"",sqft:"",pets:"",parking:"",laundry:"",
+  furnished:"",ac:"",housemates:"",simonRating:"",katyRating:"",
+  status:"new",notes:"",contactNotes:"",lat:null,lng:null
+});
+
+function App(){
+  const [pass,setPass]=useState(()=>localStorage.getItem(PASS_KEY)||"");
+  const [authed,setAuthed]=useState(false);
+  const [pi,setPi]=useState("");
+  if(!authed)return<Gate value={pi} onChange={setPi} onEnter={()=>{if(pi.trim()){localStorage.setItem(PASS_KEY,pi.trim());setPass(pi.trim());setAuthed(true);}}}/>;
+  return<Hunt pass={pass} onLogout={()=>{localStorage.removeItem(PASS_KEY);setAuthed(false);setPi("");}}/>;
+}
+
+function Gate({value,onChange,onEnter}){
+  return(
     <div style={{maxWidth:380,margin:"120px auto",textAlign:"center"}}>
       <h1 style={{fontSize:40,margin:0}}>The Hunt</h1>
       <p style={{color:"#8a8276",fontStyle:"italic",marginTop:6}}>shared apartment tracker</p>
-      <input style={{...S.in,width:"100%",marginTop:24,fontSize:16,padding:"12px 14px"}}
+      <input style={{...S_in,width:"100%",marginTop:24,fontSize:16,padding:"12px 14px"}}
         placeholder="Enter the shared passphrase" value={value}
         onChange={e=>onChange(e.target.value)} onKeyDown={e=>e.key==="Enter"&&onEnter()}/>
       <button style={{...S.primary,width:"100%",marginTop:12,padding:"12px"}} onClick={onEnter}>Enter</button>
@@ -131,102 +177,106 @@ function Gate({value,onChange,onEnter}) {
   );
 }
 
-function Hunt({pass,onLogout}) {
-  const [listings,setListings]           = useState([]);
-  const [anchors,setAnchors]             = useState(DEFAULT_ANCHORS);
-  const [overlay,setOverlay]             = useState(null);
-  const [view,setView]                   = useState("table");
-  const [draft,setDraft]                 = useState(blankDraft());
-  const [editingId,setEditingId]         = useState(null);
-  const [geoBusy,setGeoBusy]             = useState(false);
-  const [pasteText,setPasteText]         = useState("");
-  const [parseBusy,setParseBusy]         = useState(false);
-  const [parseErr,setParseErr]           = useState("");
-  const [sortKey,setSortKey]             = useState("price");
-  const [filterStatus,setFilterStatus]   = useState("all");
-  const [confirmDelete,setConfirmDelete] = useState(null);
-  const mapRef       = useRef(null);
-  const mapInstance  = useRef(null);
-  const overlayLayer = useRef(null);
-  const leafletReady = useRef(!!window.L);
+function Hunt({pass,onLogout}){
+  const [listings,setListings]=useState([]);
+  const [anchors,setAnchors]=useState(DEFAULT_ANCHORS);
+  const [overlay,setOverlay]=useState(null);
+  const [view,setView]=useState("table");
+  const [draft,setDraft]=useState(blankDraft());
+  const [editingId,setEditingId]=useState(null);
+  const [geoBusy,setGeoBusy]=useState(false);
+  const [pasteText,setPasteText]=useState("");
+  const [parseBusy,setParseBusy]=useState(false);
+  const [parseErr,setParseErr]=useState("");
+  const [sortKey,setSortKey]=useState("price");
+  const [filterStatus,setFilterStatus]=useState("all");
+  const [confirmDelete,setConfirmDelete]=useState(null);
+  const mapRef=useRef(null),mapInstance=useRef(null),overlayLayer=useRef(null),leafletReady=useRef(!!window.L);
 
   useEffect(()=>{
     const u1=window.FB.subscribe(pass,setListings);
     const u2=window.FB.subscribeMeta(pass,m=>{
-      if(m?.anchors) setAnchors(m.anchors);
-      if(m?.overlay!==undefined) setOverlay(m.overlay);
+      if(m?.anchors)setAnchors(m.anchors);
+      if(m?.overlay!==undefined)setOverlay(m.overlay);
     });
-    return ()=>{ u1&&u1(); u2&&u2(); };
+    return()=>{u1&&u1();u2&&u2();};
   },[pass]);
 
-  const saveMeta    = patch => window.FB.saveMeta(pass,patch).catch(console.error);
-  const saveAnchors = next  => { setAnchors(next); saveMeta({anchors:next}); };
-  const saveOverlay = next  => { setOverlay(next); saveMeta({overlay:next}); };
+  const saveMeta=p=>window.FB.saveMeta(pass,p).catch(console.error);
+  const saveAnchors=n=>{setAnchors(n);saveMeta({anchors:n});};
+  const saveOverlay=n=>{setOverlay(n);saveMeta({overlay:n});};
+  const updateListing=(id,patch)=>{
+    const l=listings.find(x=>x.id===id);
+    if(l)window.FB.saveListing(pass,{...l,...patch}).catch(console.error);
+  };
 
-  async function runParse() {
-    if (!pasteText.trim()) return;
-    setParseBusy(true); setParseErr("");
-    try { const f=await parseListing(pasteText); setDraft(d=>({...d,...f,lat:null,lng:null})); setPasteText(""); }
-    catch { setParseErr("Parse unavailable here — fill fields manually (only works inside Claude)."); }
+  const d=draft, sd=(k,v)=>setDraft({...draft,[k]:v});
+
+  async function runParse(){
+    if(!pasteText.trim())return;
+    setParseBusy(true);setParseErr("");
+    try{const f=await parseListing(pasteText);setDraft(x=>({...x,...f,lat:null,lng:null}));setPasteText("");}
+    catch{setParseErr("Parse unavailable here — fill fields manually (only works inside Claude).");}
     setParseBusy(false);
   }
-
-  async function submitDraft() {
-    if (!draft.title&&!draft.address&&!draft.url) return;
-    let coords={lat:draft.lat,lng:draft.lng};
-    if (draft.address&&draft.lat==null) {
+  async function submitDraft(){
+    if(!d.title&&!d.address&&!d.url)return;
+    let coords={lat:d.lat,lng:d.lng};
+    if(d.address&&d.lat==null){
       setGeoBusy(true);
-      try { const g=await geocode(draft.address); if(g) coords=g; } catch{}
+      try{const g=await geocode(d.address);if(g)coords=g;}catch{}
       setGeoBusy(false);
     }
-    const entry={...draft,...coords,id:draft.id||Date.now().toString()};
+    const entry={...d,...coords,id:d.id||Date.now().toString()};
     await window.FB.saveListing(pass,entry);
-    setDraft(blankDraft()); setEditingId(null);
+    setDraft(blankDraft());setEditingId(null);
   }
+  function editListing(l){setDraft({...l});setEditingId(l.id);setView("table");window.scrollTo(0,0);}
+  const setStatus=(l,status)=>window.FB.saveListing(pass,{...l,status}).catch(console.error);
 
-  function editListing(l) { setDraft({...l}); setEditingId(l.id); setView("table"); window.scrollTo(0,0); }
-  const setStatus = (l,status) => window.FB.saveListing(pass,{...l,status}).catch(console.error);
-
-  function handleImageUpload(e) {
-    const file=e.target.files?.[0]; if(!file) return;
+  function handleImageUpload(e){
+    const file=e.target.files?.[0];if(!file)return;
     const reader=new FileReader();
     reader.onload=()=>{
       const map=mapInstance.current;
-      const c=map?map.getCenter():{lat:anchors.drive.lat,lng:anchors.drive.lng};
+      const c=map?map.getCenter():{lat:DEFAULT_ANCHORS.drive.lat,lng:DEFAULT_ANCHORS.drive.lng};
       saveOverlay({dataUrl:reader.result,bounds:[[c.lat-0.06,c.lng-0.08],[c.lat+0.06,c.lng+0.08]]});
     };
     reader.readAsDataURL(file);
   }
 
-  const rows = useMemo(()=>{
+  const rows=useMemo(()=>{
     const enriched=listings.map(l=>({...l,
-      bikeMi:  l.lat!=null?distMi(l,anchors.bike):null,
-      driveMi: l.lat!=null?distMi(l,anchors.drive):null,
+      bikeMi: l.lat!=null?distMi(l,anchors.bike):null,
+      driveMi:l.lat!=null?distMi(l,anchors.drive):null,
     }));
     const filtered=filterStatus==="all"?enriched:enriched.filter(l=>l.status===filterStatus);
     return filtered.sort((a,b)=>{
       const av=a[sortKey],bv=b[sortKey];
-      if(av==null||av==="") return 1; if(bv==null||bv==="") return -1;
-      if(["price","sqft","bikeMi","driveMi"].includes(sortKey)) return parseFloat(av)-parseFloat(bv);
+      if(av==null||av==="")return 1;if(bv==null||bv==="")return -1;
+      if(["price","sqft","bikeMi","driveMi","katyRating","simonRating"].includes(sortKey))return parseFloat(av)-parseFloat(bv);
       return String(av).localeCompare(String(bv));
     });
   },[listings,anchors,sortKey,filterStatus]);
 
-  // Map effect — map div always mounted (hidden via CSS) to prevent Leaflet blank-on-return
   useEffect(()=>{
-    if (view!=="map") return;
-    function init() {
-      const L=window.L; if(!L) return;
-      if (!mapInstance.current) {
+    if(view!=="map")return;
+    window._toggleExtra=id=>{
+      const el=document.getElementById("pop-x-"+id);
+      if(el)el.style.display=el.style.display==="none"?"block":"none";
+    };
+    function init(){
+      const L=window.L;if(!L)return;
+      if(!mapInstance.current){
         mapInstance.current=L.map(mapRef.current).setView([anchors.drive.lat,anchors.drive.lng],11);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap",maxZoom:19}).addTo(mapInstance.current);
       }
       const map=mapInstance.current;
-      map.invalidateSize(); // fix blank map after tab switch
-      map._custom?.forEach(l=>map.removeLayer(l)); map._custom=[];
+      map.invalidateSize();
+      map._custom?.forEach(l=>map.removeLayer(l));map._custom=[];
 
-      if (overlay) {
-        if(overlayLayer.current) map.removeLayer(overlayLayer.current);
+      if(overlay){
+        if(overlayLayer.current)map.removeLayer(overlayLayer.current);
         overlayLayer.current=L.imageOverlay(overlay.dataUrl,overlay.bounds,{opacity:0.55,interactive:false}).addTo(map);
         const[[s,w],[n,e]]=overlay.bounds;
         Object.entries({sw:[s,w],ne:[n,e]}).forEach(([key,pos])=>{
@@ -234,26 +284,49 @@ function Hunt({pass,onLogout}) {
           const upd=(ev,commit)=>{
             const ll=ev.target.getLatLng();
             let nb=overlay.bounds.map(r=>[...r]);
-            if(key==="sw") nb=[[ll.lat,ll.lng],nb[1]]; else nb=[nb[0],[ll.lat,ll.lng]];
+            if(key==="sw")nb=[[ll.lat,ll.lng],nb[1]];else nb=[nb[0],[ll.lat,ll.lng]];
             overlayLayer.current.setBounds(nb);
-            if(commit) saveOverlay({...overlay,bounds:nb});
+            if(commit)saveOverlay({...overlay,bounds:nb});
           };
-          h.on("drag",ev=>upd(ev,false)); h.on("dragend",ev=>upd(ev,true));
+          h.on("drag",ev=>upd(ev,false));h.on("dragend",ev=>upd(ev,true));
           map._custom.push(h);
         });
-      } else if(overlayLayer.current) { map.removeLayer(overlayLayer.current); overlayLayer.current=null; }
+      } else if(overlayLayer.current){map.removeLayer(overlayLayer.current);overlayLayer.current=null;}
 
       [anchors.bike,anchors.drive].forEach(anc=>{
-        map._custom.push(L.circleMarker([anc.lat,anc.lng],{radius:7,color:anc.color,fillColor:anc.color,fillOpacity:1}).addTo(map).bindPopup(`<b>${anc.label}</b>`));
-        if(!overlay) map._custom.push(L.circle([anc.lat,anc.lng],{radius:anc.radiusMi*1609.34,color:anc.color,fill:false,dashArray:"6 6",weight:2}).addTo(map));
+        const icon=L.divIcon({
+          html:`<div style="width:13px;height:13px;background:${anc.color};transform:rotate(45deg);border:2px solid #fff;box-sizing:border-box;"></div>`,
+          className:"",iconSize:[13,13],iconAnchor:[6,6],
+        });
+        map._custom.push(L.marker([anc.lat,anc.lng],{icon}).addTo(map).bindPopup(`<b>${anc.label}</b>`));
+        if(!overlay)map._custom.push(L.circle([anc.lat,anc.lng],{radius:anc.radiusMi*1609.34,color:anc.color,fill:false,dashArray:"6 6",weight:2}).addTo(map));
       });
 
       rows.forEach(l=>{
-        if(l.lat==null) return;
+        if(l.lat==null)return;
         const sc=STATUSES.find(s=>s.key===l.status)?.color||"#333";
-        const approxTag=l.addressCertain?"":" <i>(approx)</i>";
-        const popup=`<b>${l.title||"Listing"}</b><br>${l.price?"$"+l.price:""} · ${l.beds||"?"}bd${approxTag}${l.notes?`<br><span style="color:#555;font-size:12px">${l.notes}</span>`:""}${l.url?`<br><a href="${l.url}" target="_blank">link</a>`:""}`;
-        map._custom.push(L.circleMarker([l.lat,l.lng],{radius:9,color:"#fff",weight:2,fillColor:sc,fillOpacity:0.95}).addTo(map).bindPopup(popup));
+        const rad=listingRadius(l);
+        const notesHtml=l.notes?`<div style="color:#555;font-size:12px;margin-top:4px;max-width:220px">${l.notes.replace(/\n/g,"<br>")}</div>`:"";
+        const extraPairs=[
+          ["Beds",l.beds],["Baths",l.baths],["Sqft",l.sqft],
+          ["Pets",l.pets],["Parking",l.parking],["Laundry",l.laundry],
+          ["Furnished",l.furnished],["AC",l.ac],["Housemates",l.housemates],
+          ["Simon★",l.simonRating?("★".repeat(Number(l.simonRating))):null],
+          ["Katy★",l.katyRating?("★".repeat(Number(l.katyRating))):null],
+        ].filter(([,v])=>v);
+        const extraHtml=extraPairs.map(([k,v])=>{
+          const colored=YN_FIELDS.includes(k.toLowerCase())?ynHtml(v):v;
+          return`<span style="margin-right:8px;white-space:nowrap"><span style="color:#999;font-size:10px">${k} </span>${colored}</span>`;
+        }).join("");
+        const expandBtn=extraHtml?`<a href="#" onclick="window._toggleExtra('${l.id}');return false;" style="font-size:11px;color:#e07a5f;display:block;margin-top:5px">details ▾</a><div id="pop-x-${l.id}" style="display:none;margin-top:5px;line-height:2;font-size:12px">${extraHtml}</div>`:"";
+        const popup=`<div style="font-family:Georgia,serif;max-width:240px">
+          <b>${l.title||"Listing"}</b><br>
+          ${l.price?"$"+l.price:""} · ${l.beds||"?"}bd/${l.baths||"?"}ba
+          ${notesHtml}
+          ${expandBtn}
+          ${l.url?`<a href="${l.url}" target="_blank" style="font-size:11px;color:#e07a5f;display:block;margin-top:4px">open listing ↗</a>`:""}
+        </div>`;
+        map._custom.push(L.circleMarker([l.lat,l.lng],{radius:rad,color:"#fff",weight:2,fillColor:sc,fillOpacity:0.92}).addTo(map).bindPopup(popup,{maxWidth:260}));
       });
     }
     if(leafletReady.current){setTimeout(init,50);return;}
@@ -267,22 +340,16 @@ function Hunt({pass,onLogout}) {
   },[view,rows,anchors,overlay]);
 
   const f=n=>n==null?"—":n.toFixed(1);
+  const YNCell=({val})=>val?<span style={ynStyle(val)}>{val}</span>:<span style={{color:"#bbb"}}>—</span>;
+  const TABLE_COLS=["Status","Title","Notes","Contact notes","Price","Bd/Ba","→Simon (mi)","→Google (mi)","Pets","Parking","Laundry","Furnished","AC","Housemates","Simon★","Katy★","Sqft",""];
 
-  return (
+  return(
     <div>
-      <style>{`
-        input:focus,select:focus,textarea:focus{outline:none;border-color:#e07a5f!important;}
-        tr:hover{background:rgba(224,122,95,.05);}
-        .leaflet-container{font-family:Georgia,serif;}
-      `}</style>
-
       {confirmDelete&&(
         <div style={S.overlay}>
           <div style={S.dialog}>
             <p style={{margin:"0 0 16px",fontWeight:600}}>Delete this listing?</p>
-            <p style={{margin:"0 0 20px",fontSize:13,color:"#666"}}>
-              {listings.find(l=>l.id===confirmDelete)?.title||"This listing"} will be permanently removed.
-            </p>
+            <p style={{margin:"0 0 20px",fontSize:13,color:"#666"}}>{listings.find(l=>l.id===confirmDelete)?.title||"This listing"} will be permanently removed.</p>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
               <button style={S.ghost} onClick={()=>setConfirmDelete(null)}>Cancel</button>
               <button style={{...S.primary,background:"#bc4749"}} onClick={async()=>{await window.FB.deleteListing(pass,confirmDelete);setConfirmDelete(null);}}>Delete</button>
@@ -292,10 +359,7 @@ function Hunt({pass,onLogout}) {
       )}
 
       <header style={S.header}>
-        <div>
-          <h1 style={S.h1}>The Hunt</h1>
-          <p style={S.sub}>live-synced · {listings.length} listings</p>
-        </div>
+        <div><h1 style={S.h1}>The Hunt</h1><p style={S.sub}>live-synced · {listings.length} listings</p></div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
           <div style={S.tabs}>
             <button style={tab(view==="table")} onClick={()=>setView("table")}>Table</button>
@@ -307,7 +371,7 @@ function Hunt({pass,onLogout}) {
 
       <section style={S.card}>
         <div style={S.formTitle}>Paste listing text → auto-fill</div>
-        <textarea style={S.paste} placeholder="Paste raw listing text, then Parse. (Auto-parse only works inside Claude; on the deployed site fill fields manually.)" value={pasteText} onChange={e=>setPasteText(e.target.value)}/>
+        <textarea style={S.paste} placeholder="Paste raw listing text, then Parse. (Auto-parse only works inside Claude.)" value={pasteText} onChange={e=>setPasteText(e.target.value)}/>
         <div style={S.formActions}>
           <button style={S.primary} onClick={runParse} disabled={parseBusy||!pasteText.trim()}>{parseBusy?"Reading…":"Parse with Claude"}</button>
           {parseErr&&<span style={S.err}>{parseErr}</span>}
@@ -317,24 +381,32 @@ function Hunt({pass,onLogout}) {
       <section style={S.card}>
         <div style={S.formTitle}>{editingId?"Edit listing":"Review & add"}</div>
         <div style={S.formGrid}>
-          <input style={S.in} placeholder="Link" value={draft.url} onChange={e=>setDraft({...draft,url:e.target.value})}/>
-          <input style={S.in} placeholder="Title / nickname" value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/>
-          <input style={{...S.in,gridColumn:"span 2"}} placeholder="Address" value={draft.address} onChange={e=>setDraft({...draft,address:e.target.value,lat:null,lng:null})}/>
+          <input style={S_in} placeholder="Link"            value={d.url}    onChange={e=>sd("url",e.target.value)}/>
+          <input style={S_in} placeholder="Title/nickname" value={d.title}  onChange={e=>sd("title",e.target.value)}/>
+          <input style={{...S_in,gridColumn:"span 2"}} placeholder="Address" value={d.address} onChange={e=>setDraft({...d,address:e.target.value,lat:null,lng:null})}/>
           <label style={S.checkLabel}>
-            <input type="checkbox" checked={!!draft.addressCertain} onChange={e=>setDraft({...draft,addressCertain:e.target.checked})}/>
+            <input type="checkbox" checked={!!d.addressCertain} onChange={e=>sd("addressCertain",e.target.checked)}/>
             Address is exact (not approximate)
           </label>
-          <input style={S.in} placeholder="Price $" value={draft.price}   onChange={e=>setDraft({...draft,price:e.target.value})}/>
-          <input style={S.in} placeholder="Beds"    value={draft.beds}    onChange={e=>setDraft({...draft,beds:e.target.value})}/>
-          <input style={S.in} placeholder="Baths"   value={draft.baths}   onChange={e=>setDraft({...draft,baths:e.target.value})}/>
-          <input style={S.in} placeholder="Sqft"    value={draft.sqft}    onChange={e=>setDraft({...draft,sqft:e.target.value})}/>
-          <input style={S.in} placeholder="Pets"    value={draft.pets}    onChange={e=>setDraft({...draft,pets:e.target.value})}/>
-          <input style={S.in} placeholder="Parking" value={draft.parking} onChange={e=>setDraft({...draft,parking:e.target.value})}/>
-          <input style={S.in} placeholder="Laundry" value={draft.laundry} onChange={e=>setDraft({...draft,laundry:e.target.value})}/>
-          <select style={S.in} value={draft.status} onChange={e=>setDraft({...draft,status:e.target.value})}>
+          <div/><div/>
+          <input style={S_in} placeholder="Price $"    value={d.price}     onChange={e=>sd("price",e.target.value)}/>
+          <input style={S_in} placeholder="Beds"       value={d.beds}      onChange={e=>sd("beds",e.target.value)}/>
+          <input style={S_in} placeholder="Baths"      value={d.baths}     onChange={e=>sd("baths",e.target.value)}/>
+          <input style={S_in} placeholder="Sqft"       value={d.sqft}      onChange={e=>sd("sqft",e.target.value)}/>
+          <input style={S_in} placeholder="Pets"       value={d.pets}      onChange={e=>sd("pets",e.target.value)}/>
+          <input style={S_in} placeholder="Parking"    value={d.parking}   onChange={e=>sd("parking",e.target.value)}/>
+          <input style={S_in} placeholder="Laundry"    value={d.laundry}   onChange={e=>sd("laundry",e.target.value)}/>
+          <input style={S_in} placeholder="Furnished"  value={d.furnished} onChange={e=>sd("furnished",e.target.value)}/>
+          <input style={S_in} placeholder="AC"         value={d.ac}        onChange={e=>sd("ac",e.target.value)}/>
+          <input style={S_in} placeholder="Housemates" value={d.housemates}onChange={e=>sd("housemates",e.target.value)}/>
+          <StarSelect label="Simon's rating" value={d.simonRating} onChange={v=>sd("simonRating",v)}/>
+          <StarSelect label="Katy's rating"  value={d.katyRating}  onChange={v=>sd("katyRating",v)}/>
+          <select style={{...S_in}} value={d.status} onChange={e=>sd("status",e.target.value)}>
             {STATUSES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
-          <textarea style={{...S.in,gridColumn:"span 4",minHeight:60,resize:"vertical"}} placeholder="Notes" value={draft.notes} onChange={e=>setDraft({...draft,notes:e.target.value})}/>
+          <div style={{gridColumn:"span 3"}}/>
+          <textarea style={{...S_in,gridColumn:"span 4",minHeight:50,resize:"vertical"}} placeholder="Notes (apartment)" value={d.notes} onChange={e=>sd("notes",e.target.value)}/>
+          <textarea style={{...S_in,gridColumn:"span 4",minHeight:50,resize:"vertical"}} placeholder="Contact notes (emails, calls, follow-ups)" value={d.contactNotes||""} onChange={e=>sd("contactNotes",e.target.value)}/>
         </div>
         <div style={S.formActions}>
           <button style={S.primary} onClick={submitDraft} disabled={geoBusy}>{geoBusy?"Geocoding…":editingId?"Save changes":"Add listing"}</button>
@@ -351,7 +423,7 @@ function Hunt({pass,onLogout}) {
         {view==="table"&&(
           <div style={S.filterRow}>
             <span style={S.ctrlLabel}>Sort:</span>
-            {[["price","Price"],["bikeMi","→Simon"],["driveMi","→Google"],["beds","Beds"],["sqft","Sqft"]].map(([k,lbl])=>
+            {[["price","Price"],["bikeMi","→Simon"],["driveMi","→Google"],["katyRating","Katy★"],["simonRating","Simon★"],["beds","Beds"],["sqft","Sqft"]].map(([k,lbl])=>
               <button key={k} style={chip(sortKey===k)} onClick={()=>setSortKey(k)}>{lbl}</button>)}
           </div>
         )}
@@ -360,24 +432,30 @@ function Hunt({pass,onLogout}) {
       {view==="table"&&(
         <div style={S.tableWrap}>
           <table style={S.table}>
-            <thead><tr>{["Status","Title","Notes","Price","Bd/Ba","→Simon (mi)","→Google (mi)","Pets","Parking","Laundry","Sqft",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{TABLE_COLS.map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>
               {rows.map(l=>{
                 const sc=STATUSES.find(s=>s.key===l.status)?.color||"#333";
-                const inBike  = l.bikeMi !=null&&l.bikeMi <=anchors.bike.radiusMi;
-                const inDrive = l.driveMi!=null&&l.driveMi<=anchors.drive.radiusMi;
-                return (
+                const inBike =l.bikeMi !=null&&l.bikeMi <=anchors.bike.radiusMi;
+                const inDrive=l.driveMi!=null&&l.driveMi<=anchors.drive.radiusMi;
+                return(
                   <tr key={l.id} style={S.tr}>
                     <td style={S.td}><select value={l.status} onChange={e=>setStatus(l,e.target.value)} style={{...S.statusSel,color:sc,borderColor:sc}}>{STATUSES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></td>
                     <td style={S.td}>{l.url?<a href={l.url} target="_blank" rel="noreferrer" style={S.link}>{l.title||"listing"}</a>:(l.title||"—")}</td>
-                    <td style={{...S.td,minWidth:200,fontSize:12,color:"#444",whiteSpace:"pre-wrap"}}>{l.notes||"—"}</td>
+                    <td style={{...S.td,minWidth:180}}><EditableCell value={l.notes}        onSave={v=>updateListing(l.id,{notes:v})}        placeholder="apt notes…"/></td>
+                    <td style={{...S.td,minWidth:180}}><EditableCell value={l.contactNotes} onSave={v=>updateListing(l.id,{contactNotes:v})} placeholder="contact notes…"/></td>
                     <td style={S.td}>{l.price?"$"+l.price:"—"}</td>
                     <td style={S.td}>{(l.beds||"?")+"/"+(l.baths||"?")}</td>
                     <td style={{...S.td,color:inBike?"#2a9d8f":"#bc4749",fontWeight:600}}>{f(l.bikeMi)}{!l.addressCertain&&l.bikeMi!=null&&<span style={{color:"#aaa",fontWeight:400}}> ~</span>}</td>
                     <td style={{...S.td,color:inDrive?"#2a9d8f":"#bc4749",fontWeight:600}}>{f(l.driveMi)}{!l.addressCertain&&l.driveMi!=null&&<span style={{color:"#aaa",fontWeight:400}}> ~</span>}</td>
-                    <td style={S.td}>{l.pets||"—"}</td>
-                    <td style={S.td}>{l.parking||"—"}</td>
-                    <td style={S.td}>{l.laundry||"—"}</td>
+                    <td style={S.td}><YNCell val={l.pets}/></td>
+                    <td style={S.td}><YNCell val={l.parking}/></td>
+                    <td style={S.td}><YNCell val={l.laundry}/></td>
+                    <td style={S.td}><YNCell val={l.furnished}/></td>
+                    <td style={S.td}><YNCell val={l.ac}/></td>
+                    <td style={S.td}><YNCell val={l.housemates}/></td>
+                    <td style={S.td}>{l.simonRating?"★".repeat(Number(l.simonRating)):"—"}</td>
+                    <td style={S.td}>{l.katyRating?"★".repeat(Number(l.katyRating)):"—"}</td>
                     <td style={S.td}>{l.sqft||"—"}</td>
                     <td style={S.td}>
                       <button style={S.iconBtn} onClick={()=>editListing(l)}>edit</button>
@@ -386,18 +464,23 @@ function Hunt({pass,onLogout}) {
                   </tr>
                 );
               })}
-              {rows.length===0&&<tr><td colSpan={12} style={{...S.td,textAlign:"center",padding:40,color:"#999"}}>No listings yet.</td></tr>}
+              {rows.length===0&&<tr><td colSpan={TABLE_COLS.length} style={{...S.td,textAlign:"center",padding:40,color:"#999"}}>No listings yet.</td></tr>}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* Map div always mounted — hiding via CSS preserves the DOM node so Leaflet doesn't go blank */}
       <div style={{display:view==="map"?"block":"none"}}>
         <div style={S.card}>
           <div style={S.legend}>
-            {[anchors.bike,anchors.drive].map((a,i)=><span key={i} style={S.legendItem}><span style={{...S.dot,background:a.color}}/> {a.label}{!overlay?` (${a.radiusMi}mi)`:""}</span>)}
-            {STATUSES.map(s=><span key={s.key} style={S.legendItem}><span style={{...S.dot,background:s.color,border:"2px solid #fff"}}/> {s.label}</span>)}
+            {[anchors.bike,anchors.drive].map((a,i)=>(
+              <span key={i} style={S.legendItem}>
+                <span style={{width:10,height:10,background:a.color,transform:"rotate(45deg)",display:"inline-block",flexShrink:0}}/>
+                {a.label}{!overlay?` (${a.radiusMi}mi)`:""}
+              </span>
+            ))}
+            {STATUSES.map(s=><span key={s.key} style={S.legendItem}><span style={{...S.dot,background:s.color,border:"2px solid #eee"}}/> {s.label}</span>)}
+            <span style={{...S.legendItem,color:"#999",fontSize:11,fontStyle:"italic"}}>dot size = avg rating</span>
           </div>
           <div ref={mapRef} style={S.map}/>
           <div style={S.overlayBar}>
@@ -418,7 +501,7 @@ function Hunt({pass,onLogout}) {
         </div>
       </div>
 
-      <footer style={S.footer}>Live-synced via Firebase. Distances are straight-line; ~ means address is approximate.</footer>
+      <footer style={S.footer}>Live-synced via Firebase. Distances straight-line; ~ = approximate address. Dot size = average rating.</footer>
     </div>
   );
 }
@@ -426,6 +509,7 @@ function Hunt({pass,onLogout}) {
 const ink="#1a1a1a",paper="#f4f1ea",accent="#e07a5f",line="#dcd6c8";
 const tab=on=>({padding:"8px 18px",border:"none",cursor:"pointer",background:on?ink:"transparent",color:on?paper:ink,fontWeight:600,fontSize:14});
 const chip=(on,c=ink)=>({padding:"4px 12px",border:`1.5px solid ${on?c:line}`,borderRadius:20,cursor:"pointer",background:on?c:"transparent",color:on?"#fff":"#555",fontSize:12,fontWeight:600});
+const TABLE_COLS=["Status","Title","Notes","Contact notes","Price","Bd/Ba","→Simon (mi)","→Google (mi)","Pets","Parking","Laundry","Furnished","AC","Housemates","Simon★","Katy★","Sqft",""];
 const S={
   overlay:    {position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999},
   dialog:     {background:"#fffdf8",border:`1.5px solid ${line}`,borderRadius:6,padding:"28px 32px",maxWidth:360,width:"90%",boxShadow:"0 8px 32px rgba(0,0,0,.18)"},
@@ -437,7 +521,6 @@ const S={
   formTitle:  {fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",color:accent,marginBottom:12},
   paste:      {width:"100%",minHeight:90,padding:"10px 12px",border:`1.5px solid ${line}`,borderRadius:3,fontSize:13,fontFamily:"inherit",background:"#fff",color:ink,resize:"vertical",boxSizing:"border-box"},
   formGrid:   {display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:8},
-  in:         {padding:"8px 10px",border:`1.5px solid ${line}`,borderRadius:3,fontSize:13,fontFamily:"inherit",background:"#fff",color:ink},
   checkLabel: {gridColumn:"span 2",display:"flex",alignItems:"center",gap:8,fontSize:13,color:"#555",cursor:"pointer"},
   formActions:{display:"flex",gap:10,marginTop:12,alignItems:"center"},
   primary:    {padding:"9px 22px",background:ink,color:paper,border:"none",borderRadius:3,cursor:"pointer",fontWeight:700,fontSize:14,fontFamily:"inherit"},
@@ -455,9 +538,9 @@ const S={
   statusSel:  {border:"1.5px solid",borderRadius:14,padding:"3px 8px",fontSize:11,fontWeight:700,background:"#fff",cursor:"pointer",fontFamily:"inherit"},
   iconBtn:    {border:"none",background:"none",cursor:"pointer",fontSize:12,color:"#777",textDecoration:"underline",marginRight:6,fontFamily:"inherit"},
   map:        {height:480,borderRadius:4,border:`1.5px solid ${line}`,zIndex:1},
-  legend:     {display:"flex",gap:16,flexWrap:"wrap",marginBottom:12,fontSize:12,color:"#555"},
-  legendItem: {display:"flex",alignItems:"center",gap:5},
-  dot:        {width:11,height:11,borderRadius:"50%",display:"inline-block"},
+  legend:     {display:"flex",gap:16,flexWrap:"wrap",marginBottom:12,fontSize:12,color:"#555",alignItems:"center"},
+  legendItem: {display:"flex",alignItems:"center",gap:6},
+  dot:        {width:11,height:11,borderRadius:"50%",display:"inline-block",flexShrink:0},
   overlayBar: {display:"flex",gap:12,marginTop:12,alignItems:"center",flexWrap:"wrap"},
   uploadBtn:  {padding:"9px 22px",background:accent,color:"#fff",borderRadius:3,cursor:"pointer",fontWeight:700,fontSize:14,display:"inline-block"},
   hint:       {fontSize:12,color:"#8a8276",fontStyle:"italic"},
@@ -468,7 +551,7 @@ const S={
 };
 
 function boot(){
-  if(window.FB) ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  if(window.FB)ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
   else window.addEventListener("fb-ready",()=>ReactDOM.createRoot(document.getElementById("root")).render(<App/>),{once:true});
 }
 boot();
