@@ -1,43 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>The Hunt — Apartment Tracker</title>
-<link id="leaflet-css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link id="leaflet-css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <style>
-  :root {
-    --ink: #1a1a1a; --paper: #f4f1ea; --accent: #e07a5f; --line: #dcd6c8; --card: #fffdf8;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: Georgia, 'Times New Roman', serif; background: var(--paper); color: var(--ink); }
-  #root { max-width: 1300px; margin: 0 auto; padding: 24px 28px; }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent) !important; }
-  tr:hover { background: rgba(224,122,95,.05); }
-  .leaflet-container { font-family: Georgia, serif; }
-  a { text-decoration: none; }
-  button { font-family: inherit; }
+  :root{--ink:#1a1a1a;--paper:#f4f1ea;--accent:#e07a5f;--line:#dcd6c8;--card:#fffdf8;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Georgia,'Times New Roman',serif;background:var(--paper);color:var(--ink);}
+  #root{max-width:1300px;margin:0 auto;padding:24px 28px;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)!important;}
+  tr:hover{background:rgba(224,122,95,.05);}
+  .leaflet-container{font-family:Georgia,serif;}
+  a{text-decoration:none;}
+  button{font-family:inherit;}
 </style>
 </head>
 <body>
 <div id="root"></div>
 
-<!-- React + Babel (standalone, no build step) -->
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
-<!-- Firebase (modular, via CDN) -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot }
     from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // ─────────────────────────────────────────────────────────────────────
-  //  STEP 1: PASTE YOUR FIREBASE CONFIG HERE
-  //  (Firebase console → Project settings → "Your apps" → SDK setup → Config)
-  // ─────────────────────────────────────────────────────────────────────
   const firebaseConfig = {
     apiKey: "AIzaSyBQE_jALldqxkmkk01oLwyfiDAlj5HnMS0",
     authDomain: "apartment-hunt-2026.firebaseapp.com",
@@ -47,35 +39,21 @@
     appId: "1:636926285570:web:07bb863c19a7f8a4c5541b",
   };
 
-  const fbApp = initializeApp(firebaseConfig);
-  const db = getFirestore(fbApp);
-
-  // Expose a tiny API for the React app below
+  const db = getFirestore(initializeApp(firebaseConfig));
   window.FB = {
-    // listings live under: hunts/{passphrase}/listings/{id}
-    subscribe(passphrase, cb) {
-      const col = collection(db, "hunts", passphrase, "listings");
-      return onSnapshot(col, (snap) => {
-        const items = [];
-        snap.forEach((d) => items.push({ id: d.id, ...d.data() }));
-        cb(items);
-      }, (err) => console.error("Firestore subscribe error:", err));
+    subscribe(pass, cb) {
+      return onSnapshot(collection(db,"hunts",pass,"listings"),
+        snap=>{ const items=[]; snap.forEach(d=>items.push({id:d.id,...d.data()})); cb(items); },
+        err=>console.error("subscribe error",err));
     },
-    subscribeMeta(passphrase, cb) {
-      // single doc for anchors + overlay: hunts/{passphrase}/meta/config
-      const ref = doc(db, "hunts", passphrase, "meta", "config");
-      return onSnapshot(ref, (d) => cb(d.exists() ? d.data() : null),
-        (err) => console.error("Firestore meta error:", err));
+    subscribeMeta(pass, cb) {
+      return onSnapshot(doc(db,"hunts",pass,"meta","config"),
+        d=>cb(d.exists()?d.data():null),
+        err=>console.error("meta error",err));
     },
-    async saveListing(passphrase, listing) {
-      await setDoc(doc(db, "hunts", passphrase, "listings", listing.id), listing);
-    },
-    async deleteListing(passphrase, id) {
-      await deleteDoc(doc(db, "hunts", passphrase, "listings", id));
-    },
-    async saveMeta(passphrase, meta) {
-      await setDoc(doc(db, "hunts", passphrase, "meta", "config"), meta, { merge: true });
-    },
+    async saveListing(pass, l)  { await setDoc(doc(db,"hunts",pass,"listings",l.id), l); },
+    async deleteListing(pass,id){ await deleteDoc(doc(db,"hunts",pass,"listings",id)); },
+    async saveMeta(pass, meta)  { await setDoc(doc(db,"hunts",pass,"meta","config"), meta, {merge:true}); },
   };
   window.dispatchEvent(new Event("fb-ready"));
 </script>
@@ -84,230 +62,244 @@
 const { useState, useEffect, useRef, useMemo } = React;
 
 const DEFAULT_ANCHORS = {
-  bike: { label: "Simon — 3105 Patrick Henry Dr", lat: 37.3845, lng: -121.9755, radiusMi: 3.5, color: "#e07a5f" },
-  drive: { label: "Katy — Google MTV", lat: 37.422, lng: -122.0841, radiusMi: 13, color: "#3d5a80" },
+  bike:  { label:"Simon — 3105 Patrick Henry Dr", lat:37.3845, lng:-121.9755, radiusMi:3.5,  color:"#e07a5f" },
+  drive: { label:"Katy — Google MTV",             lat:37.422,  lng:-122.0841, radiusMi:13,   color:"#3d5a80" },
 };
 
 const STATUSES = [
-  { key: "new", label: "New", color: "#8d99ae" },
-  { key: "contacted", label: "Contacted", color: "#e9c46a" },
-  { key: "toured", label: "Toured", color: "#2a9d8f" },
-  { key: "rejected", label: "Rejected", color: "#bc4749" },
-  { key: "favorite", label: "Favorite", color: "#e07a5f" },
+  { key:"new",       label:"New",       color:"#8d99ae" },
+  { key:"contacted", label:"Contacted", color:"#e9c46a" },
+  { key:"responded", label:"Responded", color:"#7b5ea7" },
+  { key:"toured",    label:"Toured",    color:"#2a9d8f" },
+  { key:"favorite",  label:"Favorite",  color:"#e07a5f" },
+  { key:"rejected",  label:"Rejected",  color:"#bc4749" },
 ];
-
-function distMi(a, b) {
-  if (a.lat == null || b.lat == null) return null;
-  const R = 3958.8, toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
-  const x = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-}
-
-async function geocode(address) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
-  const res = await fetch(url, { headers: { "Accept-Language": "en" } });
-  const data = await res.json();
-  if (!data.length) return null;
-  return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-}
-
-// NOTE: paste-to-parse calls Claude. This only works when the page is opened
-// inside Claude's artifact sandbox (api.anthropic.com is proxied there).
-// On a deployed Firebase URL this call will fail CORS — so on the live site,
-// you just fill the form fields manually. See README.
-async function parseListing(text) {
-  const prompt = `Extract apartment listing fields from the text below. Respond with ONLY a JSON object, no markdown, no preamble. Keys: title, address, price (number only), beds, baths, sqft, pets, parking, laundry, notes. Use "" for anything not found.\n\nLISTING:\n${text}`;
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: prompt }] }),
-  });
-  const data = await res.json();
-  const raw = data.content.filter((c) => c.type === "text").map((c) => c.text).join("");
-  return JSON.parse(raw.replace(/```json|```/g, "").trim());
-}
 
 const PASS_KEY = "apt-hunt-pass";
 
-function App() {
-  const [pass, setPass] = useState(() => localStorage.getItem(PASS_KEY) || "");
-  const [authed, setAuthed] = useState(false);
-  const [passInput, setPassInput] = useState("");
-
-  if (!authed) {
-    return (
-      <Gate
-        value={passInput}
-        onChange={setPassInput}
-        onEnter={() => { if (passInput.trim()) { localStorage.setItem(PASS_KEY, passInput.trim()); setPass(passInput.trim()); setAuthed(true); } }}
-      />
-    );
-  }
-  return <Hunt pass={pass} onLogout={() => { localStorage.removeItem(PASS_KEY); setAuthed(false); setPassInput(""); }} />;
+function distMi(a,b) {
+  if (a.lat==null||b.lat==null) return null;
+  const R=3958.8, rad=d=>d*Math.PI/180;
+  const dLat=rad(b.lat-a.lat), dLng=rad(b.lng-a.lng);
+  const x=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
 
-function Gate({ value, onChange, onEnter }) {
+async function geocode(address) {
+  const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`,{headers:{"Accept-Language":"en"}});
+  const d = await res.json();
+  if (!d.length) return null;
+  return { lat:parseFloat(d[0].lat), lng:parseFloat(d[0].lon) };
+}
+
+async function parseListing(text) {
+  const res = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,
+      messages:[{role:"user",content:`Extract apartment listing fields. Respond ONLY with a JSON object, no markdown. Keys: title, address, price (number only), beds, baths, sqft, pets, parking, laundry, notes. Use "" for anything not found.\n\nLISTING:\n${text}`}]}),
+  });
+  const data=await res.json();
+  const raw=data.content.filter(c=>c.type==="text").map(c=>c.text).join("");
+  return JSON.parse(raw.replace(/```json|```/g,"").trim());
+}
+
+const blankDraft = () => ({
+  id:null,url:"",title:"",address:"",addressCertain:false,
+  price:"",beds:"",baths:"",sqft:"",pets:"",parking:"",
+  laundry:"",status:"new",notes:"",lat:null,lng:null
+});
+
+function App() {
+  const [pass, setPass]           = useState(()=>localStorage.getItem(PASS_KEY)||"");
+  const [authed, setAuthed]       = useState(false);
+  const [passInput, setPassInput] = useState("");
+  if (!authed) return <Gate value={passInput} onChange={setPassInput} onEnter={()=>{if(passInput.trim()){localStorage.setItem(PASS_KEY,passInput.trim());setPass(passInput.trim());setAuthed(true);}}}/>;
+  return <Hunt pass={pass} onLogout={()=>{localStorage.removeItem(PASS_KEY);setAuthed(false);setPassInput("");}} />;
+}
+
+function Gate({value,onChange,onEnter}) {
   return (
-    <div style={{ maxWidth: 380, margin: "120px auto", textAlign: "center" }}>
-      <h1 style={{ fontSize: 40, margin: 0 }}>The Hunt</h1>
-      <p style={{ color: "#8a8276", fontStyle: "italic", marginTop: 6 }}>shared apartment tracker</p>
-      <input
-        style={{ ...S.in, width: "100%", marginTop: 24, fontSize: 16, padding: "12px 14px" }}
-        placeholder="Enter the shared passphrase"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && onEnter()}
-      />
-      <button style={{ ...S.primary, width: "100%", marginTop: 12, padding: "12px" }} onClick={onEnter}>Enter</button>
-      <p style={{ fontSize: 11, color: "#a89f8e", marginTop: 20 }}>
-        You and Simon type the same phrase to share one workspace. This is a light gate, not real security — don't store anything sensitive.
-      </p>
+    <div style={{maxWidth:380,margin:"120px auto",textAlign:"center"}}>
+      <h1 style={{fontSize:40,margin:0}}>The Hunt</h1>
+      <p style={{color:"#8a8276",fontStyle:"italic",marginTop:6}}>shared apartment tracker</p>
+      <input style={{...S.in,width:"100%",marginTop:24,fontSize:16,padding:"12px 14px"}}
+        placeholder="Enter the shared passphrase" value={value}
+        onChange={e=>onChange(e.target.value)} onKeyDown={e=>e.key==="Enter"&&onEnter()}/>
+      <button style={{...S.primary,width:"100%",marginTop:12,padding:"12px"}} onClick={onEnter}>Enter</button>
+      <p style={{fontSize:11,color:"#a89f8e",marginTop:20}}>You and Simon type the same phrase to share one workspace.</p>
     </div>
   );
 }
 
-function Hunt({ pass, onLogout }) {
-  const [listings, setListings] = useState([]);
-  const [anchors, setAnchors] = useState(DEFAULT_ANCHORS);
-  const [overlay, setOverlay] = useState(null);
-  const [view, setView] = useState("table");
-  const [draft, setDraft] = useState(blankDraft());
-  const [editingId, setEditingId] = useState(null);
-  const [geoBusy, setGeoBusy] = useState(false);
-  const [pasteText, setPasteText] = useState("");
-  const [parseBusy, setParseBusy] = useState(false);
-  const [parseErr, setParseErr] = useState("");
-  const [sortKey, setSortKey] = useState("price");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const mapRef = useRef(null), mapInstance = useRef(null), overlayLayer = useRef(null), leafletReady = useRef(!!window.L);
+function Hunt({pass,onLogout}) {
+  const [listings,setListings]           = useState([]);
+  const [anchors,setAnchors]             = useState(DEFAULT_ANCHORS);
+  const [overlay,setOverlay]             = useState(null);
+  const [view,setView]                   = useState("table");
+  const [draft,setDraft]                 = useState(blankDraft());
+  const [editingId,setEditingId]         = useState(null);
+  const [geoBusy,setGeoBusy]             = useState(false);
+  const [pasteText,setPasteText]         = useState("");
+  const [parseBusy,setParseBusy]         = useState(false);
+  const [parseErr,setParseErr]           = useState("");
+  const [sortKey,setSortKey]             = useState("price");
+  const [filterStatus,setFilterStatus]   = useState("all");
+  const [confirmDelete,setConfirmDelete] = useState(null);
+  const mapRef       = useRef(null);
+  const mapInstance  = useRef(null);
+  const overlayLayer = useRef(null);
+  const leafletReady = useRef(!!window.L);
 
-  function blankDraft() {
-    return { id: null, url: "", title: "", address: "", price: "", beds: "", baths: "", sqft: "",
-      pets: "", parking: "", laundry: "", status: "new", notes: "", lat: null, lng: null };
-  }
-
-  // Live subscriptions
-  useEffect(() => {
-    const unsub1 = window.FB.subscribe(pass, setListings);
-    const unsub2 = window.FB.subscribeMeta(pass, (m) => {
-      if (m?.anchors) setAnchors(m.anchors);
-      if (m?.overlay !== undefined) setOverlay(m.overlay);
+  useEffect(()=>{
+    const u1=window.FB.subscribe(pass,setListings);
+    const u2=window.FB.subscribeMeta(pass,m=>{
+      if(m?.anchors) setAnchors(m.anchors);
+      if(m?.overlay!==undefined) setOverlay(m.overlay);
     });
-    return () => { unsub1 && unsub1(); unsub2 && unsub2(); };
-  }, [pass]);
+    return ()=>{ u1&&u1(); u2&&u2(); };
+  },[pass]);
 
-  const saveMeta = (patch) => window.FB.saveMeta(pass, patch).catch(console.error);
-  const saveAnchors = (next) => { setAnchors(next); saveMeta({ anchors: next }); };
-  const saveOverlay = (next) => { setOverlay(next); saveMeta({ overlay: next }); };
+  const saveMeta    = patch => window.FB.saveMeta(pass,patch).catch(console.error);
+  const saveAnchors = next  => { setAnchors(next); saveMeta({anchors:next}); };
+  const saveOverlay = next  => { setOverlay(next); saveMeta({overlay:next}); };
 
   async function runParse() {
     if (!pasteText.trim()) return;
     setParseBusy(true); setParseErr("");
-    try {
-      const fields = await parseListing(pasteText);
-      setDraft((d) => ({ ...d, ...fields, lat: null, lng: null }));
-      setPasteText("");
-    } catch {
-      setParseErr("Parse unavailable here — fill the fields manually (auto-parse only works inside Claude).");
-    }
+    try { const f=await parseListing(pasteText); setDraft(d=>({...d,...f,lat:null,lng:null})); setPasteText(""); }
+    catch { setParseErr("Parse unavailable here — fill fields manually (only works inside Claude)."); }
     setParseBusy(false);
   }
 
   async function submitDraft() {
-    if (!draft.title && !draft.address && !draft.url) return;
-    let coords = { lat: draft.lat, lng: draft.lng };
-    if (draft.address && draft.lat == null) {
+    if (!draft.title&&!draft.address&&!draft.url) return;
+    let coords={lat:draft.lat,lng:draft.lng};
+    if (draft.address&&draft.lat==null) {
       setGeoBusy(true);
-      try { const g = await geocode(draft.address); if (g) coords = g; } catch {}
+      try { const g=await geocode(draft.address); if(g) coords=g; } catch{}
       setGeoBusy(false);
     }
-    const entry = { ...draft, ...coords, id: draft.id || Date.now().toString() };
-    await window.FB.saveListing(pass, entry);
+    const entry={...draft,...coords,id:draft.id||Date.now().toString()};
+    await window.FB.saveListing(pass,entry);
     setDraft(blankDraft()); setEditingId(null);
   }
 
-  function editListing(l) { setDraft({ ...l }); setEditingId(l.id); setView("table"); window.scrollTo(0, 0); }
-  const deleteListing = (id) => window.FB.deleteListing(pass, id).catch(console.error);
-  const setStatus = (l, status) => window.FB.saveListing(pass, { ...l, status }).catch(console.error);
+  function editListing(l) { setDraft({...l}); setEditingId(l.id); setView("table"); window.scrollTo(0,0); }
+  const setStatus = (l,status) => window.FB.saveListing(pass,{...l,status}).catch(console.error);
 
   function handleImageUpload(e) {
-    const file = e.target.files?.[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const map = mapInstance.current;
-      const c = map ? map.getCenter() : { lat: anchors.drive.lat, lng: anchors.drive.lng };
-      saveOverlay({ dataUrl: reader.result, bounds: [[c.lat - 0.06, c.lng - 0.08], [c.lat + 0.06, c.lng + 0.08]] });
+    const file=e.target.files?.[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const map=mapInstance.current;
+      const c=map?map.getCenter():{lat:anchors.drive.lat,lng:anchors.drive.lng};
+      saveOverlay({dataUrl:reader.result,bounds:[[c.lat-0.06,c.lng-0.08],[c.lat+0.06,c.lng+0.08]]});
     };
     reader.readAsDataURL(file);
   }
 
-  const rows = useMemo(() => {
-    const enriched = listings.map((l) => ({ ...l, bikeMi: l.lat != null ? distMi(l, anchors.bike) : null, driveMi: l.lat != null ? distMi(l, anchors.drive) : null }));
-    const filtered = filterStatus === "all" ? enriched : enriched.filter((l) => l.status === filterStatus);
-    return filtered.sort((a, b) => {
-      const av = a[sortKey], bv = b[sortKey];
-      if (av == null || av === "") return 1; if (bv == null || bv === "") return -1;
-      if (["price", "sqft", "bikeMi", "driveMi"].includes(sortKey)) return parseFloat(av) - parseFloat(bv);
+  const rows = useMemo(()=>{
+    const enriched=listings.map(l=>({...l,
+      bikeMi:  l.lat!=null?distMi(l,anchors.bike):null,
+      driveMi: l.lat!=null?distMi(l,anchors.drive):null,
+    }));
+    const filtered=filterStatus==="all"?enriched:enriched.filter(l=>l.status===filterStatus);
+    return filtered.sort((a,b)=>{
+      const av=a[sortKey],bv=b[sortKey];
+      if(av==null||av==="") return 1; if(bv==null||bv==="") return -1;
+      if(["price","sqft","bikeMi","driveMi"].includes(sortKey)) return parseFloat(av)-parseFloat(bv);
       return String(av).localeCompare(String(bv));
     });
-  }, [listings, anchors, sortKey, filterStatus]);
+  },[listings,anchors,sortKey,filterStatus]);
 
-  useEffect(() => {
-    if (view !== "map") return;
+  // Map effect — map div always mounted (hidden via CSS) to prevent Leaflet blank-on-return
+  useEffect(()=>{
+    if (view!=="map") return;
     function init() {
-      const L = window.L; if (!L) return;
+      const L=window.L; if(!L) return;
       if (!mapInstance.current) {
-        mapInstance.current = L.map(mapRef.current).setView([anchors.drive.lat, anchors.drive.lng], 11);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 19 }).addTo(mapInstance.current);
+        mapInstance.current=L.map(mapRef.current).setView([anchors.drive.lat,anchors.drive.lng],11);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap",maxZoom:19}).addTo(mapInstance.current);
       }
-      const map = mapInstance.current;
-      map._custom?.forEach((l) => map.removeLayer(l)); map._custom = [];
+      const map=mapInstance.current;
+      map.invalidateSize(); // fix blank map after tab switch
+      map._custom?.forEach(l=>map.removeLayer(l)); map._custom=[];
+
       if (overlay) {
-        if (overlayLayer.current) map.removeLayer(overlayLayer.current);
-        overlayLayer.current = L.imageOverlay(overlay.dataUrl, overlay.bounds, { opacity: 0.55, interactive: false }).addTo(map);
-        const [[s, w], [n, e]] = overlay.bounds;
-        Object.entries({ sw: [s, w], ne: [n, e] }).forEach(([key, pos]) => {
-          const handle = L.marker(pos, { draggable: true, title: `Drag to align (${key})` }).addTo(map);
-          const upd = (ev, commit) => {
-            const ll = ev.target.getLatLng();
-            let nb = overlay.bounds.map((r) => [...r]);
-            if (key === "sw") nb = [[ll.lat, ll.lng], nb[1]]; else nb = [nb[0], [ll.lat, ll.lng]];
+        if(overlayLayer.current) map.removeLayer(overlayLayer.current);
+        overlayLayer.current=L.imageOverlay(overlay.dataUrl,overlay.bounds,{opacity:0.55,interactive:false}).addTo(map);
+        const[[s,w],[n,e]]=overlay.bounds;
+        Object.entries({sw:[s,w],ne:[n,e]}).forEach(([key,pos])=>{
+          const h=L.marker(pos,{draggable:true,title:`Drag to align (${key})`}).addTo(map);
+          const upd=(ev,commit)=>{
+            const ll=ev.target.getLatLng();
+            let nb=overlay.bounds.map(r=>[...r]);
+            if(key==="sw") nb=[[ll.lat,ll.lng],nb[1]]; else nb=[nb[0],[ll.lat,ll.lng]];
             overlayLayer.current.setBounds(nb);
-            if (commit) saveOverlay({ ...overlay, bounds: nb });
+            if(commit) saveOverlay({...overlay,bounds:nb});
           };
-          handle.on("drag", (ev) => upd(ev, false));
-          handle.on("dragend", (ev) => upd(ev, true));
-          map._custom.push(handle);
+          h.on("drag",ev=>upd(ev,false)); h.on("dragend",ev=>upd(ev,true));
+          map._custom.push(h);
         });
-      } else if (overlayLayer.current) { map.removeLayer(overlayLayer.current); overlayLayer.current = null; }
-      [anchors.bike, anchors.drive].forEach((anc) => {
-        map._custom.push(L.circleMarker([anc.lat, anc.lng], { radius: 7, color: anc.color, fillColor: anc.color, fillOpacity: 1 }).addTo(map).bindPopup(`<b>${anc.label}</b>`));
-        if (!overlay) map._custom.push(L.circle([anc.lat, anc.lng], { radius: anc.radiusMi * 1609.34, color: anc.color, fill: false, dashArray: "6 6", weight: 2 }).addTo(map));
+      } else if(overlayLayer.current) { map.removeLayer(overlayLayer.current); overlayLayer.current=null; }
+
+      [anchors.bike,anchors.drive].forEach(anc=>{
+        map._custom.push(L.circleMarker([anc.lat,anc.lng],{radius:7,color:anc.color,fillColor:anc.color,fillOpacity:1}).addTo(map).bindPopup(`<b>${anc.label}</b>`));
+        if(!overlay) map._custom.push(L.circle([anc.lat,anc.lng],{radius:anc.radiusMi*1609.34,color:anc.color,fill:false,dashArray:"6 6",weight:2}).addTo(map));
       });
-      rows.forEach((l) => {
-        if (l.lat == null) return;
-        const sc = STATUSES.find((s) => s.key === l.status)?.color || "#333";
-        map._custom.push(L.circleMarker([l.lat, l.lng], { radius: 9, color: "#fff", weight: 2, fillColor: sc, fillOpacity: 0.95 })
-          .addTo(map).bindPopup(`<b>${l.title || "Listing"}</b><br>${l.price ? "$" + l.price : ""} · ${l.beds || "?"}bd<br>${l.address || ""}<br>${l.url ? `<a href="${l.url}" target="_blank">link</a>` : ""}`));
+
+      rows.forEach(l=>{
+        if(l.lat==null) return;
+        const sc=STATUSES.find(s=>s.key===l.status)?.color||"#333";
+        const approxTag=l.addressCertain?"":" <i>(approx)</i>";
+        const popup=`<b>${l.title||"Listing"}</b><br>${l.price?"$"+l.price:""} · ${l.beds||"?"}bd${approxTag}${l.notes?`<br><span style="color:#555;font-size:12px">${l.notes}</span>`:""}${l.url?`<br><a href="${l.url}" target="_blank">link</a>`:""}`;
+        map._custom.push(L.circleMarker([l.lat,l.lng],{radius:9,color:"#fff",weight:2,fillColor:sc,fillOpacity:0.95}).addTo(map).bindPopup(popup));
       });
     }
-    if (leafletReady.current) { setTimeout(init, 30); }
-    else { const t = setInterval(() => { if (window.L) { leafletReady.current = true; clearInterval(t); init(); } }, 100); return () => clearInterval(t); }
-  }, [view, rows, anchors, overlay]);
+    if(leafletReady.current){setTimeout(init,50);return;}
+    if(window.L){leafletReady.current=true;setTimeout(init,50);}
+    else{
+      const sc=document.createElement("script");
+      sc.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
+      sc.onload=()=>{leafletReady.current=true;setTimeout(init,50);};
+      document.body.appendChild(sc);
+    }
+  },[view,rows,anchors,overlay]);
 
-  const f = (n) => (n == null ? "—" : n.toFixed(1));
+  const f=n=>n==null?"—":n.toFixed(1);
 
   return (
     <div>
+      <style>{`
+        input:focus,select:focus,textarea:focus{outline:none;border-color:#e07a5f!important;}
+        tr:hover{background:rgba(224,122,95,.05);}
+        .leaflet-container{font-family:Georgia,serif;}
+      `}</style>
+
+      {confirmDelete&&(
+        <div style={S.overlay}>
+          <div style={S.dialog}>
+            <p style={{margin:"0 0 16px",fontWeight:600}}>Delete this listing?</p>
+            <p style={{margin:"0 0 20px",fontSize:13,color:"#666"}}>
+              {listings.find(l=>l.id===confirmDelete)?.title||"This listing"} will be permanently removed.
+            </p>
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button style={S.ghost} onClick={()=>setConfirmDelete(null)}>Cancel</button>
+              <button style={{...S.primary,background:"#bc4749"}} onClick={async()=>{await window.FB.deleteListing(pass,confirmDelete);setConfirmDelete(null);}}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header style={S.header}>
         <div>
           <h1 style={S.h1}>The Hunt</h1>
-          <p style={S.sub}>shared · live-synced · {listings.length} listings</p>
+          <p style={S.sub}>live-synced · {listings.length} listings</p>
         </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div style={{display:"flex",gap:12,alignItems:"center"}}>
           <div style={S.tabs}>
-            <button style={tab(view === "table")} onClick={() => setView("table")}>Table</button>
-            <button style={tab(view === "map")} onClick={() => setView("map")}>Map</button>
+            <button style={tab(view==="table")} onClick={()=>setView("table")}>Table</button>
+            <button style={tab(view==="map")}   onClick={()=>setView("map")}>Map</button>
           </div>
           <button style={S.iconBtn} onClick={onLogout}>exit</button>
         </div>
@@ -315,153 +307,169 @@ function Hunt({ pass, onLogout }) {
 
       <section style={S.card}>
         <div style={S.formTitle}>Paste listing text → auto-fill</div>
-        <textarea style={S.paste} placeholder="Paste raw listing text, then Parse. (Auto-parse runs only inside Claude; on the live site just type the fields.)" value={pasteText} onChange={(e) => setPasteText(e.target.value)} />
+        <textarea style={S.paste} placeholder="Paste raw listing text, then Parse. (Auto-parse only works inside Claude; on the deployed site fill fields manually.)" value={pasteText} onChange={e=>setPasteText(e.target.value)}/>
         <div style={S.formActions}>
-          <button style={S.primary} onClick={runParse} disabled={parseBusy || !pasteText.trim()}>{parseBusy ? "Reading…" : "Parse with Claude"}</button>
-          {parseErr && <span style={S.err}>{parseErr}</span>}
+          <button style={S.primary} onClick={runParse} disabled={parseBusy||!pasteText.trim()}>{parseBusy?"Reading…":"Parse with Claude"}</button>
+          {parseErr&&<span style={S.err}>{parseErr}</span>}
         </div>
       </section>
 
       <section style={S.card}>
-        <div style={S.formTitle}>{editingId ? "Edit listing" : "Review & add"}</div>
+        <div style={S.formTitle}>{editingId?"Edit listing":"Review & add"}</div>
         <div style={S.formGrid}>
-          <input style={S.in} placeholder="Link" value={draft.url} onChange={(e) => setDraft({ ...draft, url: e.target.value })} />
-          <input style={S.in} placeholder="Title / nickname" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
-          <input style={{ ...S.in, gridColumn: "span 2" }} placeholder="Address" value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value, lat: null, lng: null })} />
-          <input style={S.in} placeholder="Price $" value={draft.price} onChange={(e) => setDraft({ ...draft, price: e.target.value })} />
-          <input style={S.in} placeholder="Beds" value={draft.beds} onChange={(e) => setDraft({ ...draft, beds: e.target.value })} />
-          <input style={S.in} placeholder="Baths" value={draft.baths} onChange={(e) => setDraft({ ...draft, baths: e.target.value })} />
-          <input style={S.in} placeholder="Sqft" value={draft.sqft} onChange={(e) => setDraft({ ...draft, sqft: e.target.value })} />
-          <input style={S.in} placeholder="Pets" value={draft.pets} onChange={(e) => setDraft({ ...draft, pets: e.target.value })} />
-          <input style={S.in} placeholder="Parking" value={draft.parking} onChange={(e) => setDraft({ ...draft, parking: e.target.value })} />
-          <input style={S.in} placeholder="Laundry" value={draft.laundry} onChange={(e) => setDraft({ ...draft, laundry: e.target.value })} />
-          <select style={S.in} value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
-            {STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+          <input style={S.in} placeholder="Link" value={draft.url} onChange={e=>setDraft({...draft,url:e.target.value})}/>
+          <input style={S.in} placeholder="Title / nickname" value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/>
+          <input style={{...S.in,gridColumn:"span 2"}} placeholder="Address" value={draft.address} onChange={e=>setDraft({...draft,address:e.target.value,lat:null,lng:null})}/>
+          <label style={S.checkLabel}>
+            <input type="checkbox" checked={!!draft.addressCertain} onChange={e=>setDraft({...draft,addressCertain:e.target.checked})}/>
+            Address is exact (not approximate)
+          </label>
+          <input style={S.in} placeholder="Price $" value={draft.price}   onChange={e=>setDraft({...draft,price:e.target.value})}/>
+          <input style={S.in} placeholder="Beds"    value={draft.beds}    onChange={e=>setDraft({...draft,beds:e.target.value})}/>
+          <input style={S.in} placeholder="Baths"   value={draft.baths}   onChange={e=>setDraft({...draft,baths:e.target.value})}/>
+          <input style={S.in} placeholder="Sqft"    value={draft.sqft}    onChange={e=>setDraft({...draft,sqft:e.target.value})}/>
+          <input style={S.in} placeholder="Pets"    value={draft.pets}    onChange={e=>setDraft({...draft,pets:e.target.value})}/>
+          <input style={S.in} placeholder="Parking" value={draft.parking} onChange={e=>setDraft({...draft,parking:e.target.value})}/>
+          <input style={S.in} placeholder="Laundry" value={draft.laundry} onChange={e=>setDraft({...draft,laundry:e.target.value})}/>
+          <select style={S.in} value={draft.status} onChange={e=>setDraft({...draft,status:e.target.value})}>
+            {STATUSES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
-          <textarea style={{ ...S.in, gridColumn: "span 4", minHeight: 50, resize: "vertical" }} placeholder="Notes" value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+          <textarea style={{...S.in,gridColumn:"span 4",minHeight:60,resize:"vertical"}} placeholder="Notes" value={draft.notes} onChange={e=>setDraft({...draft,notes:e.target.value})}/>
         </div>
         <div style={S.formActions}>
-          <button style={S.primary} onClick={submitDraft} disabled={geoBusy}>{geoBusy ? "Geocoding…" : editingId ? "Save changes" : "Add listing"}</button>
-          {editingId && <button style={S.ghost} onClick={() => { setDraft(blankDraft()); setEditingId(null); }}>Cancel</button>}
+          <button style={S.primary} onClick={submitDraft} disabled={geoBusy}>{geoBusy?"Geocoding…":editingId?"Save changes":"Add listing"}</button>
+          {editingId&&<button style={S.ghost} onClick={()=>{setDraft(blankDraft());setEditingId(null);}}>Cancel</button>}
         </div>
       </section>
 
       <div style={S.controls}>
         <div style={S.filterRow}>
           <span style={S.ctrlLabel}>Filter:</span>
-          <button style={chip(filterStatus === "all")} onClick={() => setFilterStatus("all")}>All</button>
-          {STATUSES.map((s) => <button key={s.key} style={chip(filterStatus === s.key, s.color)} onClick={() => setFilterStatus(s.key)}>{s.label}</button>)}
+          <button style={chip(filterStatus==="all")} onClick={()=>setFilterStatus("all")}>All</button>
+          {STATUSES.map(s=><button key={s.key} style={chip(filterStatus===s.key,s.color)} onClick={()=>setFilterStatus(s.key)}>{s.label}</button>)}
         </div>
-        {view === "table" && (
+        {view==="table"&&(
           <div style={S.filterRow}>
             <span style={S.ctrlLabel}>Sort:</span>
-            {[["price", "Price"], ["bikeMi", "→Simon"], ["driveMi", "→Google"], ["sqft", "Sqft"], ["beds", "Beds"]].map(([k, lbl]) => <button key={k} style={chip(sortKey === k)} onClick={() => setSortKey(k)}>{lbl}</button>)}
+            {[["price","Price"],["bikeMi","→Simon"],["driveMi","→Google"],["beds","Beds"],["sqft","Sqft"]].map(([k,lbl])=>
+              <button key={k} style={chip(sortKey===k)} onClick={()=>setSortKey(k)}>{lbl}</button>)}
           </div>
         )}
       </div>
 
-      {view === "table" && (
+      {view==="table"&&(
         <div style={S.tableWrap}>
           <table style={S.table}>
-            <thead><tr>{["Status", "Title", "Price", "Bd/Ba", "Sqft", "→Simon (mi)", "→Google (mi)", "Pets", "Parking", "Laundry", "Notes", ""].map((h) => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{["Status","Title","Notes","Price","Bd/Ba","→Simon (mi)","→Google (mi)","Pets","Parking","Laundry","Sqft",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>
-              {rows.map((l) => {
-                const sc = STATUSES.find((s) => s.key === l.status)?.color || "#333";
-                const inBike = l.bikeMi != null && l.bikeMi <= anchors.bike.radiusMi;
-                const inDrive = l.driveMi != null && l.driveMi <= anchors.drive.radiusMi;
+              {rows.map(l=>{
+                const sc=STATUSES.find(s=>s.key===l.status)?.color||"#333";
+                const inBike  = l.bikeMi !=null&&l.bikeMi <=anchors.bike.radiusMi;
+                const inDrive = l.driveMi!=null&&l.driveMi<=anchors.drive.radiusMi;
                 return (
                   <tr key={l.id} style={S.tr}>
-                    <td style={S.td}><select value={l.status} onChange={(e) => setStatus(l, e.target.value)} style={{ ...S.statusSel, color: sc, borderColor: sc }}>{STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select></td>
-                    <td style={S.td}>{l.url ? <a href={l.url} target="_blank" rel="noreferrer" style={S.link}>{l.title || "listing"}</a> : (l.title || "—")}</td>
-                    <td style={S.td}>{l.price ? "$" + l.price : "—"}</td>
-                    <td style={S.td}>{(l.beds || "?") + "/" + (l.baths || "?")}</td>
-                    <td style={S.td}>{l.sqft || "—"}</td>
-                    <td style={{ ...S.td, color: inBike ? "#2a9d8f" : "#bc4749", fontWeight: 600 }}>{f(l.bikeMi)}</td>
-                    <td style={{ ...S.td, color: inDrive ? "#2a9d8f" : "#bc4749", fontWeight: 600 }}>{f(l.driveMi)}</td>
-                    <td style={S.td}>{l.pets || "—"}</td>
-                    <td style={S.td}>{l.parking || "—"}</td>
-                    <td style={S.td}>{l.laundry || "—"}</td>
-                    <td style={{ ...S.td, maxWidth: 180, fontSize: 12, color: "#6b6b6b" }}>{l.notes || "—"}</td>
-                    <td style={S.td}><button style={S.iconBtn} onClick={() => editListing(l)}>edit</button><button style={{ ...S.iconBtn, color: "#bc4749" }} onClick={() => deleteListing(l.id)}>del</button></td>
+                    <td style={S.td}><select value={l.status} onChange={e=>setStatus(l,e.target.value)} style={{...S.statusSel,color:sc,borderColor:sc}}>{STATUSES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></td>
+                    <td style={S.td}>{l.url?<a href={l.url} target="_blank" rel="noreferrer" style={S.link}>{l.title||"listing"}</a>:(l.title||"—")}</td>
+                    <td style={{...S.td,minWidth:200,fontSize:12,color:"#444",whiteSpace:"pre-wrap"}}>{l.notes||"—"}</td>
+                    <td style={S.td}>{l.price?"$"+l.price:"—"}</td>
+                    <td style={S.td}>{(l.beds||"?")+"/"+(l.baths||"?")}</td>
+                    <td style={{...S.td,color:inBike?"#2a9d8f":"#bc4749",fontWeight:600}}>{f(l.bikeMi)}{!l.addressCertain&&l.bikeMi!=null&&<span style={{color:"#aaa",fontWeight:400}}> ~</span>}</td>
+                    <td style={{...S.td,color:inDrive?"#2a9d8f":"#bc4749",fontWeight:600}}>{f(l.driveMi)}{!l.addressCertain&&l.driveMi!=null&&<span style={{color:"#aaa",fontWeight:400}}> ~</span>}</td>
+                    <td style={S.td}>{l.pets||"—"}</td>
+                    <td style={S.td}>{l.parking||"—"}</td>
+                    <td style={S.td}>{l.laundry||"—"}</td>
+                    <td style={S.td}>{l.sqft||"—"}</td>
+                    <td style={S.td}>
+                      <button style={S.iconBtn} onClick={()=>editListing(l)}>edit</button>
+                      <button style={{...S.iconBtn,color:"#bc4749"}} onClick={()=>setConfirmDelete(l.id)}>del</button>
+                    </td>
                   </tr>
                 );
               })}
-              {rows.length === 0 && <tr><td colSpan={12} style={{ ...S.td, textAlign: "center", padding: 40, color: "#999" }}>No listings yet.</td></tr>}
+              {rows.length===0&&<tr><td colSpan={12} style={{...S.td,textAlign:"center",padding:40,color:"#999"}}>No listings yet.</td></tr>}
             </tbody>
           </table>
         </div>
       )}
 
-      {view === "map" && (
+      {/* Map div always mounted — hiding via CSS preserves the DOM node so Leaflet doesn't go blank */}
+      <div style={{display:view==="map"?"block":"none"}}>
         <div style={S.card}>
           <div style={S.legend}>
-            {[anchors.bike, anchors.drive].map((a, i) => <span key={i} style={S.legendItem}><span style={{ ...S.dot, background: a.color }} /> {a.label}{!overlay ? ` (${a.radiusMi}mi)` : ""}</span>)}
-            {STATUSES.map((s) => <span key={s.key} style={S.legendItem}><span style={{ ...S.dot, background: s.color, border: "2px solid #fff" }} /> {s.label}</span>)}
+            {[anchors.bike,anchors.drive].map((a,i)=><span key={i} style={S.legendItem}><span style={{...S.dot,background:a.color}}/> {a.label}{!overlay?` (${a.radiusMi}mi)`:""}</span>)}
+            {STATUSES.map(s=><span key={s.key} style={S.legendItem}><span style={{...S.dot,background:s.color,border:"2px solid #fff"}}/> {s.label}</span>)}
           </div>
-          <div ref={mapRef} style={S.map} />
+          <div ref={mapRef} style={S.map}/>
           <div style={S.overlayBar}>
-            <label style={S.uploadBtn}>{overlay ? "Replace isochrone image" : "Upload isochrone image"}<input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} /></label>
-            {overlay && <button style={S.ghost} onClick={() => saveOverlay(null)}>Remove image (show rings)</button>}
-            {overlay && <span style={S.hint}>Drag the SW & NE corner pins to align.</span>}
+            <label style={S.uploadBtn}>{overlay?"Replace isochrone image":"Upload isochrone image"}<input type="file" accept="image/*" onChange={handleImageUpload} style={{display:"none"}}/></label>
+            {overlay&&<button style={S.ghost} onClick={()=>saveOverlay(null)}>Remove image (show rings)</button>}
+            {overlay&&<span style={S.hint}>Drag the SW & NE corner pins to align.</span>}
           </div>
-          {!overlay && (
+          {!overlay&&(
             <div style={S.anchorEdit}>
-              {["bike", "drive"].map((k) => <label key={k} style={S.anchorLabel}>{anchors[k].label} radius (mi):
-                <input type="number" step="0.5" value={anchors[k].radiusMi} style={S.miInput} onChange={(e) => saveAnchors({ ...anchors, [k]: { ...anchors[k], radiusMi: parseFloat(e.target.value) || 0 } })} /></label>)}
+              {["bike","drive"].map(k=>(
+                <label key={k} style={S.anchorLabel}>{anchors[k].label} radius (mi):
+                  <input type="number" step="0.5" value={anchors[k].radiusMi} style={S.miInput}
+                    onChange={e=>saveAnchors({...anchors,[k]:{...anchors[k],radiusMi:parseFloat(e.target.value)||0}})}/>
+                </label>
+              ))}
             </div>
           )}
         </div>
-      )}
+      </div>
 
-      <footer style={S.footer}>Live-synced via Firebase. Straight-line distances are a rough travel-time proxy; the isochrone image is the real thing.</footer>
+      <footer style={S.footer}>Live-synced via Firebase. Distances are straight-line; ~ means address is approximate.</footer>
     </div>
   );
 }
 
-const ink = "#1a1a1a", paper = "#f4f1ea", accent = "#e07a5f", line = "#dcd6c8";
-const tab = (on) => ({ padding: "8px 18px", border: "none", cursor: "pointer", background: on ? ink : "transparent", color: on ? paper : ink, fontWeight: 600, fontSize: 14 });
-const chip = (on, c = ink) => ({ padding: "4px 12px", border: `1.5px solid ${on ? c : line}`, borderRadius: 20, cursor: "pointer", background: on ? c : "transparent", color: on ? "#fff" : "#555", fontSize: 12, fontWeight: 600 });
-const S = {
-  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderBottom: `3px solid ${ink}`, paddingBottom: 14, marginBottom: 20 },
-  h1: { margin: 0, fontSize: 40, letterSpacing: "-.02em", fontWeight: 700 },
-  sub: { margin: "4px 0 0", fontSize: 13, color: "#8a8276", fontStyle: "italic" },
-  tabs: { display: "flex", border: `2px solid ${ink}` },
-  card: { background: "#fffdf8", border: `1.5px solid ${line}`, borderRadius: 4, padding: 18, marginBottom: 18, boxShadow: "3px 3px 0 rgba(26,26,26,.06)" },
-  formTitle: { fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: accent, marginBottom: 12 },
-  paste: { width: "100%", minHeight: 90, padding: "10px 12px", border: `1.5px solid ${line}`, borderRadius: 3, fontSize: 13, fontFamily: "inherit", background: "#fff", color: ink, resize: "vertical" },
-  formGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 },
-  in: { padding: "8px 10px", border: `1.5px solid ${line}`, borderRadius: 3, fontSize: 13, fontFamily: "inherit", background: "#fff", color: ink },
-  formActions: { display: "flex", gap: 10, marginTop: 12, alignItems: "center" },
-  primary: { padding: "9px 22px", background: ink, color: paper, border: "none", borderRadius: 3, cursor: "pointer", fontWeight: 700, fontSize: 14 },
-  ghost: { padding: "9px 22px", background: "transparent", color: ink, border: `1.5px solid ${ink}`, borderRadius: 3, cursor: "pointer", fontWeight: 600, fontSize: 14 },
-  err: { color: "#bc4749", fontSize: 13, fontStyle: "italic" },
-  controls: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 },
-  filterRow: { display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" },
-  ctrlLabel: { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em", color: "#8a8276", marginRight: 4 },
-  tableWrap: { overflowX: "auto", border: `1.5px solid ${line}`, borderRadius: 4, background: "#fffdf8" },
-  table: { borderCollapse: "collapse", width: "100%", fontSize: 13 },
-  th: { textAlign: "left", padding: "10px", borderBottom: `2px solid ${ink}`, fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em", whiteSpace: "nowrap" },
-  tr: { borderBottom: `1px solid ${line}` },
-  td: { padding: "9px 10px", verticalAlign: "top" },
-  link: { color: accent, fontWeight: 600 },
-  statusSel: { border: "1.5px solid", borderRadius: 14, padding: "3px 8px", fontSize: 11, fontWeight: 700, background: "#fff", cursor: "pointer", fontFamily: "inherit" },
-  iconBtn: { border: "none", background: "none", cursor: "pointer", fontSize: 12, color: "#777", textDecoration: "underline", marginRight: 6 },
-  map: { height: 480, borderRadius: 4, border: `1.5px solid ${line}`, zIndex: 1 },
-  legend: { display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12, fontSize: 12, color: "#555" },
-  legendItem: { display: "flex", alignItems: "center", gap: 5 },
-  dot: { width: 11, height: 11, borderRadius: "50%", display: "inline-block" },
-  overlayBar: { display: "flex", gap: 12, marginTop: 12, alignItems: "center", flexWrap: "wrap" },
-  uploadBtn: { padding: "9px 22px", background: accent, color: "#fff", borderRadius: 3, cursor: "pointer", fontWeight: 700, fontSize: 14, display: "inline-block" },
-  hint: { fontSize: 12, color: "#8a8276", fontStyle: "italic" },
-  anchorEdit: { display: "flex", gap: 24, marginTop: 12, flexWrap: "wrap" },
-  anchorLabel: { fontSize: 12, color: "#555", display: "flex", alignItems: "center", gap: 6 },
-  miInput: { width: 60, padding: "4px 6px", border: `1.5px solid ${line}`, borderRadius: 3, fontFamily: "inherit" },
-  footer: { marginTop: 20, fontSize: 11, color: "#a89f8e", fontStyle: "italic", textAlign: "center" },
+const ink="#1a1a1a",paper="#f4f1ea",accent="#e07a5f",line="#dcd6c8";
+const tab=on=>({padding:"8px 18px",border:"none",cursor:"pointer",background:on?ink:"transparent",color:on?paper:ink,fontWeight:600,fontSize:14});
+const chip=(on,c=ink)=>({padding:"4px 12px",border:`1.5px solid ${on?c:line}`,borderRadius:20,cursor:"pointer",background:on?c:"transparent",color:on?"#fff":"#555",fontSize:12,fontWeight:600});
+const S={
+  overlay:    {position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999},
+  dialog:     {background:"#fffdf8",border:`1.5px solid ${line}`,borderRadius:6,padding:"28px 32px",maxWidth:360,width:"90%",boxShadow:"0 8px 32px rgba(0,0,0,.18)"},
+  header:     {display:"flex",justifyContent:"space-between",alignItems:"flex-end",borderBottom:`3px solid ${ink}`,paddingBottom:14,marginBottom:20},
+  h1:         {margin:0,fontSize:40,letterSpacing:"-.02em",fontWeight:700},
+  sub:        {margin:"4px 0 0",fontSize:13,color:"#8a8276",fontStyle:"italic"},
+  tabs:       {display:"flex",border:`2px solid ${ink}`},
+  card:       {background:"#fffdf8",border:`1.5px solid ${line}`,borderRadius:4,padding:18,marginBottom:18,boxShadow:"3px 3px 0 rgba(26,26,26,.06)"},
+  formTitle:  {fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",color:accent,marginBottom:12},
+  paste:      {width:"100%",minHeight:90,padding:"10px 12px",border:`1.5px solid ${line}`,borderRadius:3,fontSize:13,fontFamily:"inherit",background:"#fff",color:ink,resize:"vertical",boxSizing:"border-box"},
+  formGrid:   {display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:8},
+  in:         {padding:"8px 10px",border:`1.5px solid ${line}`,borderRadius:3,fontSize:13,fontFamily:"inherit",background:"#fff",color:ink},
+  checkLabel: {gridColumn:"span 2",display:"flex",alignItems:"center",gap:8,fontSize:13,color:"#555",cursor:"pointer"},
+  formActions:{display:"flex",gap:10,marginTop:12,alignItems:"center"},
+  primary:    {padding:"9px 22px",background:ink,color:paper,border:"none",borderRadius:3,cursor:"pointer",fontWeight:700,fontSize:14,fontFamily:"inherit"},
+  ghost:      {padding:"9px 22px",background:"transparent",color:ink,border:`1.5px solid ${ink}`,borderRadius:3,cursor:"pointer",fontWeight:600,fontSize:14,fontFamily:"inherit"},
+  err:        {color:"#bc4749",fontSize:13,fontStyle:"italic"},
+  controls:   {display:"flex",flexDirection:"column",gap:8,marginBottom:14},
+  filterRow:  {display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"},
+  ctrlLabel:  {fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:".05em",color:"#8a8276",marginRight:4},
+  tableWrap:  {overflowX:"auto",border:`1.5px solid ${line}`,borderRadius:4,background:"#fffdf8"},
+  table:      {borderCollapse:"collapse",width:"100%",fontSize:13},
+  th:         {textAlign:"left",padding:"10px",borderBottom:`2px solid ${ink}`,fontSize:11,textTransform:"uppercase",letterSpacing:".04em",whiteSpace:"nowrap"},
+  tr:         {borderBottom:`1px solid ${line}`},
+  td:         {padding:"9px 10px",verticalAlign:"top"},
+  link:       {color:accent,fontWeight:600},
+  statusSel:  {border:"1.5px solid",borderRadius:14,padding:"3px 8px",fontSize:11,fontWeight:700,background:"#fff",cursor:"pointer",fontFamily:"inherit"},
+  iconBtn:    {border:"none",background:"none",cursor:"pointer",fontSize:12,color:"#777",textDecoration:"underline",marginRight:6,fontFamily:"inherit"},
+  map:        {height:480,borderRadius:4,border:`1.5px solid ${line}`,zIndex:1},
+  legend:     {display:"flex",gap:16,flexWrap:"wrap",marginBottom:12,fontSize:12,color:"#555"},
+  legendItem: {display:"flex",alignItems:"center",gap:5},
+  dot:        {width:11,height:11,borderRadius:"50%",display:"inline-block"},
+  overlayBar: {display:"flex",gap:12,marginTop:12,alignItems:"center",flexWrap:"wrap"},
+  uploadBtn:  {padding:"9px 22px",background:accent,color:"#fff",borderRadius:3,cursor:"pointer",fontWeight:700,fontSize:14,display:"inline-block"},
+  hint:       {fontSize:12,color:"#8a8276",fontStyle:"italic"},
+  anchorEdit: {display:"flex",gap:24,marginTop:12,flexWrap:"wrap"},
+  anchorLabel:{fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:6},
+  miInput:    {width:60,padding:"4px 6px",border:`1.5px solid ${line}`,borderRadius:3,fontFamily:"inherit"},
+  footer:     {marginTop:20,fontSize:11,color:"#a89f8e",fontStyle:"italic",textAlign:"center"},
 };
 
-function boot() {
-  if (window.FB) ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-  else window.addEventListener("fb-ready", () => ReactDOM.createRoot(document.getElementById("root")).render(<App />), { once: true });
+function boot(){
+  if(window.FB) ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  else window.addEventListener("fb-ready",()=>ReactDOM.createRoot(document.getElementById("root")).render(<App/>),{once:true});
 }
 boot();
 </script>
