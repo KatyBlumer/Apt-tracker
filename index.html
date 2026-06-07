@@ -65,6 +65,7 @@ const STATUSES = [
   { key:"toured",    label:"Toured",    color:"#2a9d8f" },
   { key:"favorite",  label:"Favorite",  color:"#e07a5f" },
   { key:"rejected",  label:"Rejected",  color:"#bc4749" },
+  { key:"deleted",   label:"Deleted",   color:"#6b6b6b" },
 ];
 const YN_FIELDS = ["pets","parking","laundry","furnished","ac","housemates","floor_not_carpet","gym"];
 const PASS_KEY = "apt-hunt-pass";
@@ -305,6 +306,10 @@ function Hunt({pass,onLogout}){
       const el=document.getElementById("pop-x-"+id);
       if(el)el.style.display=el.style.display==="none"?"block":"none";
     };
+    window._editListing=id=>{
+      const l=listings.find(x=>x.id===id);
+      if(l)editListing(l);
+    };
     function init(){
       const L=window.L;if(!L)return;
       if(!mapInstance.current){
@@ -369,7 +374,10 @@ function Hunt({pass,onLogout}){
           ${l.price?"$"+l.price:""} · ${l.beds||"?"}bd/${l.baths||"?"}ba
           ${notesHtml}
           ${expandBtn}
-          ${l.url?`<a href="${l.url}" target="_blank" style="font-size:11px;color:#e07a5f;display:block;margin-top:4px">open listing ↗</a>`:""}
+          <div style="margin-top:6px;display:flex;gap:10px">
+            <a href="#" onclick="window._editListing('${l.id}');return false;" style="font-size:11px;color:#8a8276">edit ✎</a>
+            ${l.url?`<a href="${l.url}" target="_blank" style="font-size:11px;color:#e07a5f">open listing ↗</a>`:""}
+          </div>
         </div>`;
         map._custom.push(L.circleMarker([l.lat,l.lng],{radius:rad,color:"#fff",weight:2,fillColor:sc,fillOpacity:0.92}).addTo(map).bindPopup(popup,{maxWidth:260}));
       });
