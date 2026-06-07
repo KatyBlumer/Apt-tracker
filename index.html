@@ -16,6 +16,7 @@
   a{text-decoration:none;}
   button{font-family:inherit;}
   td div[title="Click to edit"]:hover{border-color:#dcd6c8!important;background:rgba(224,122,95,.04);}
+  th[draggable]{cursor:grab;}th[draggable]:active{cursor:grabbing;}
 </style>
 </head>
 <body>
@@ -65,8 +66,33 @@ const STATUSES = [
   { key:"favorite",  label:"Favorite",  color:"#e07a5f" },
   { key:"rejected",  label:"Rejected",  color:"#bc4749" },
 ];
-const YN_FIELDS = ["pets","parking","laundry","furnished","ac","housemates", "floor_not_carpet"];
+const YN_FIELDS = ["pets","parking","laundry","furnished","ac","housemates","floor_not_carpet","gym"];
 const PASS_KEY = "apt-hunt-pass";
+
+// Column definitions for the table
+const ALL_COL_DEFS = [
+  {key:"status",       header:"Status"},
+  {key:"title",        header:"Title"},
+  {key:"notes",        header:"Notes"},
+  {key:"contactNotes", header:"Contact notes"},
+  {key:"price",        header:"Price",            sortK:"price"},
+  {key:"bdba",         header:"Bd/Ba",             sortK:"beds"},
+  {key:"bikeMi",       header:"→Simon (mi)",       sortK:"bikeMi"},
+  {key:"driveMi",      header:"→Google (mi)",      sortK:"driveMi"},
+  {key:"pets",         header:"Pets"},
+  {key:"parking",      header:"Parking"},
+  {key:"laundry",      header:"Laundry"},
+  {key:"furnished",    header:"Furnished"},
+  {key:"ac",           header:"AC"},
+  {key:"floor",        header:"Floor not carpet"},
+  {key:"gym",          header:"Gym"},
+  {key:"housemates",   header:"Housemates"},
+  {key:"simonRating",  header:"Simon★",            sortK:"simonRating"},
+  {key:"katyRating",   header:"Katy★",             sortK:"katyRating"},
+  {key:"sqft",         header:"Sqft",              sortK:"sqft"},
+  {key:"actions",      header:""},
+];
+const DEFAULT_COL_ORDER = ALL_COL_DEFS.map(c => c.key);
 
 function distMi(a,b) {
   if(a.lat==null||b.lat==null)return null;
@@ -83,7 +109,7 @@ async function parseListing(text){
   const res=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,
-      messages:[{role:"user",content:`Extract apartment listing fields. Respond ONLY with a JSON object, no markdown. Keys: title, address, price (number only), beds, baths, sqft, pets, parking, laundry, furnished, floor_not_carpet, ac, housemates, notes. Use "" for anything not found.\n\nLISTING:\n${text}`}]}),
+      messages:[{role:"user",content:`Extract apartment listing fields. Respond ONLY with a JSON object, no markdown. Keys: title, address, price (number only), beds, baths, sqft, pets, parking, laundry, furnished, floor_not_carpet, ac, housemates, gym, notes. Use "" for anything not found.\n\nLISTING:\n${text}`}]}),
   });
   const data=await res.json();
   const raw=data.content.filter(c=>c.type==="text").map(c=>c.text).join("");
@@ -151,7 +177,7 @@ function StarSelect({value,onChange,label}){
 const blankDraft=()=>({
   id:null,url:"",title:"",address:"",addressCertain:false,
   price:"",beds:"",baths:"",sqft:"",pets:"",parking:"",laundry:"",
-  furnished:"",ac:"",floor_not_carpet:"",housemates:"",simonRating:"",katyRating:"",
+  furnished:"",ac:"",floor_not_carpet:"",gym:"",housemates:"",simonRating:"",katyRating:"",
   status:"new",notes:"",contactNotes:"",lat:null,lng:null
 });
 
@@ -180,7 +206,9 @@ function Gate({value,onChange,onEnter}){
 function Hunt({pass,onLogout}){
   const [listings,setListings]=useState([]);
   const [anchors,setAnchors]=useState(DEFAULT_ANCHORS);
-  const [overlay,setOverlay]=useState(null);
+  const [overlay,setOverlay]=useState(null);           // frozen (Firebase-persisted) overlay
+  const [pendingOverlay,setPendingOverlay]=useState(null); // local-only, not yet frozen
+  const [overlayHidden,setOverlayHidden]=useState(false);  // hide frozen overlay temporarily
   const [view,setView]=useState("table");
   const [draft,setDraft]=useState(blankDraft());
   const [editingId,setEditingId]=useState(null);
@@ -191,6 +219,12 @@ function Hunt({pass,onLogout}){
   const [sortKey,setSortKey]=useState("price");
   const [filterStatus,setFilterStatus]=useState("all");
   const [confirmDelete,setConfirmDelete]=useState(null);
+  const [colOrder,setColOrder]=useState(()=>{
+    try{const s=localStorage.getItem("col-order");return s?JSON.parse(s):DEFAULT_COL_ORDER;}
+    catch{return DEFAULT_COL_ORDER;}
+  });
+  const [dragOverCol,setDragOverCol]=useState(null);
+  const dragColRef=useRef(null);
   const mapRef=useRef(null),mapInstance=useRef(null),overlayLayer=useRef(null),leafletReady=useRef(!!window.L);
 
   useEffect(()=>{
@@ -234,13 +268,15 @@ function Hunt({pass,onLogout}){
   function editListing(l){setDraft({...l});setEditingId(l.id);setView("table");window.scrollTo(0,0);}
   const setStatus=(l,status)=>window.FB.saveListing(pass,{...l,status}).catch(console.error);
 
+  // Upload sets pendingOverlay (local only, not frozen yet)
   function handleImageUpload(e){
     const file=e.target.files?.[0];if(!file)return;
+    e.target.value=""; // reset so same file can be re-chosen
     const reader=new FileReader();
     reader.onload=()=>{
       const map=mapInstance.current;
       const c=map?map.getCenter():{lat:DEFAULT_ANCHORS.drive.lat,lng:DEFAULT_ANCHORS.drive.lng};
-      saveOverlay({dataUrl:reader.result,bounds:[[c.lat-0.06,c.lng-0.08],[c.lat+0.06,c.lng+0.08]]});
+      setPendingOverlay({dataUrl:reader.result,bounds:[[c.lat-0.06,c.lng-0.08],[c.lat+0.06,c.lng+0.08]]});
     };
     reader.readAsDataURL(file);
   }
@@ -259,6 +295,10 @@ function Hunt({pass,onLogout}){
     });
   },[listings,anchors,sortKey,filterStatus]);
 
+  // Effective overlay shown on map
+  const displayOverlay = pendingOverlay || (!overlayHidden && overlay) || null;
+  const showDragHandles = !!pendingOverlay; // only show drag handles when image is not yet frozen
+
   useEffect(()=>{
     if(view!=="map")return;
     window._toggleExtra=id=>{
@@ -275,31 +315,35 @@ function Hunt({pass,onLogout}){
       map.invalidateSize();
       map._custom?.forEach(l=>map.removeLayer(l));map._custom=[];
 
-      if(overlay){
+      if(displayOverlay){
         if(overlayLayer.current)map.removeLayer(overlayLayer.current);
-        overlayLayer.current=L.imageOverlay(overlay.dataUrl,overlay.bounds,{opacity:0.55,interactive:false}).addTo(map);
-        const[[s,w],[n,e]]=overlay.bounds;
-        Object.entries({sw:[s,w],ne:[n,e]}).forEach(([key,pos])=>{
-          const h=L.marker(pos,{draggable:true,title:`Drag to align (${key})`}).addTo(map);
-          const upd=(ev,commit)=>{
-            const ll=ev.target.getLatLng();
-            let nb=overlay.bounds.map(r=>[...r]);
-            if(key==="sw")nb=[[ll.lat,ll.lng],nb[1]];else nb=[nb[0],[ll.lat,ll.lng]];
-            overlayLayer.current.setBounds(nb);
-            if(commit)saveOverlay({...overlay,bounds:nb});
-          };
-          h.on("drag",ev=>upd(ev,false));h.on("dragend",ev=>upd(ev,true));
-          map._custom.push(h);
-        });
+        overlayLayer.current=L.imageOverlay(displayOverlay.dataUrl,displayOverlay.bounds,{opacity:0.55,interactive:false}).addTo(map);
+
+        if(showDragHandles){
+          const[[s,w],[n,e]]=displayOverlay.bounds;
+          Object.entries({sw:[s,w],ne:[n,e]}).forEach(([key,pos])=>{
+            const h=L.marker(pos,{draggable:true,title:`Drag to align (${key})`}).addTo(map);
+            const upd=(ev)=>{
+              const ll=ev.target.getLatLng();
+              let nb=displayOverlay.bounds.map(r=>[...r]);
+              if(key==="sw")nb=[[ll.lat,ll.lng],nb[1]];else nb=[nb[0],[ll.lat,ll.lng]];
+              overlayLayer.current.setBounds(nb);
+              return nb;
+            };
+            h.on("drag",ev=>upd(ev));
+            h.on("dragend",ev=>{const nb=upd(ev);setPendingOverlay(p=>({...p,bounds:nb}));});
+            map._custom.push(h);
+          });
+        }
       } else if(overlayLayer.current){map.removeLayer(overlayLayer.current);overlayLayer.current=null;}
 
       [anchors.bike,anchors.drive].forEach(anc=>{
         const icon=L.divIcon({
-          html:`<div style="width:13px;height:13px;background:${anc.color};transform:rotate(45deg);border:2px solid #fff;box-sizing:border-box;"></div>`,
+          html:`<div style="width:13px;height:13px;background:#1a1a1a;transform:rotate(45deg);border:2px solid #fff;box-sizing:border-box;"></div>`,
           className:"",iconSize:[13,13],iconAnchor:[6,6],
         });
         map._custom.push(L.marker([anc.lat,anc.lng],{icon}).addTo(map).bindPopup(`<b>${anc.label}</b>`));
-        if(!overlay)map._custom.push(L.circle([anc.lat,anc.lng],{radius:anc.radiusMi*1609.34,color:anc.color,fill:false,dashArray:"6 6",weight:2}).addTo(map));
+        if(!displayOverlay)map._custom.push(L.circle([anc.lat,anc.lng],{radius:anc.radiusMi*1609.34,color:anc.color,fill:false,dashArray:"6 6",weight:2}).addTo(map));
       });
 
       rows.forEach(l=>{
@@ -310,7 +354,8 @@ function Hunt({pass,onLogout}){
         const extraPairs=[
           ["Beds",l.beds],["Baths",l.baths],["Sqft",l.sqft],
           ["Pets",l.pets],["Parking",l.parking],["Laundry",l.laundry],
-          ["Furnished",l.furnished],["AC",l.ac],["Floor not carpet",l.floor_not_carpet],["Housemates",l.housemates],
+          ["Furnished",l.furnished],["AC",l.ac],["Floor not carpet",l.floor_not_carpet],
+          ["Gym",l.gym],["Housemates",l.housemates],
           ["Simon★",l.simonRating?("★".repeat(Number(l.simonRating))):null],
           ["Katy★",l.katyRating?("★".repeat(Number(l.katyRating))):null],
         ].filter(([,v])=>v);
@@ -337,11 +382,51 @@ function Hunt({pass,onLogout}){
       sc.onload=()=>{leafletReady.current=true;setTimeout(init,50);};
       document.body.appendChild(sc);
     }
-  },[view,rows,anchors,overlay]);
+  },[view,rows,anchors,displayOverlay,showDragHandles]);
 
   const f=n=>n==null?"—":n.toFixed(1);
   const YNCell=({val})=>val?<span style={ynStyle(val)}>{val}</span>:<span style={{color:"#bbb"}}>—</span>;
-  const TABLE_COLS=["Status","Title","Notes","Contact notes","Price","Bd/Ba","→Simon (mi)","→Google (mi)","Pets","Parking","Laundry","Furnished","AC","Floor not carpet", "Housemates","Simon★","Katy★","Sqft",""];
+
+  // Column reordering
+  const reorderCols=(fromKey,toKey)=>{
+    if(fromKey===toKey)return;
+    const newOrder=[...colOrder];
+    const from=newOrder.indexOf(fromKey),to=newOrder.indexOf(toKey);
+    if(from===-1||to===-1)return;
+    newOrder.splice(from,1);newOrder.splice(to,0,fromKey);
+    setColOrder(newOrder);
+    localStorage.setItem("col-order",JSON.stringify(newOrder));
+  };
+
+  // Render a single table cell by column key
+  function renderCell(l,key){
+    const sc=STATUSES.find(s=>s.key===l.status)?.color||"#333";
+    const inBike=l.bikeMi!=null&&l.bikeMi<=anchors.bike.radiusMi;
+    const inDrive=l.driveMi!=null&&l.driveMi<=anchors.drive.radiusMi;
+    switch(key){
+      case"status":    return<td key={key} style={S.td}><select value={l.status} onChange={e=>setStatus(l,e.target.value)} style={{...S.statusSel,color:sc,borderColor:sc}}>{STATUSES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></td>;
+      case"title":     return<td key={key} style={S.td}>{l.url?<a href={l.url} target="_blank" rel="noreferrer" style={S.link}>{l.title||"listing"}</a>:(l.title||"—")}</td>;
+      case"notes":     return<td key={key} style={{...S.td,minWidth:180}}><EditableCell value={l.notes}        onSave={v=>updateListing(l.id,{notes:v})}        placeholder="apt notes…"/></td>;
+      case"contactNotes":return<td key={key} style={{...S.td,minWidth:180}}><EditableCell value={l.contactNotes} onSave={v=>updateListing(l.id,{contactNotes:v})} placeholder="contact notes…"/></td>;
+      case"price":     return<td key={key} style={S.td}>{l.price?"$"+l.price:"—"}</td>;
+      case"bdba":      return<td key={key} style={S.td}>{(l.beds||"?")+"/"+(l.baths||"?")}</td>;
+      case"bikeMi":    return<td key={key} style={{...S.td,color:inBike?"#2a9d8f":"#bc4749",fontWeight:600}}>{f(l.bikeMi)}{!l.addressCertain&&l.bikeMi!=null&&<span style={{color:"#aaa",fontWeight:400}}> ~</span>}</td>;
+      case"driveMi":   return<td key={key} style={{...S.td,color:inDrive?"#2a9d8f":"#bc4749",fontWeight:600}}>{f(l.driveMi)}{!l.addressCertain&&l.driveMi!=null&&<span style={{color:"#aaa",fontWeight:400}}> ~</span>}</td>;
+      case"pets":      return<td key={key} style={S.td}><YNCell val={l.pets}/></td>;
+      case"parking":   return<td key={key} style={S.td}><YNCell val={l.parking}/></td>;
+      case"laundry":   return<td key={key} style={S.td}><YNCell val={l.laundry}/></td>;
+      case"furnished": return<td key={key} style={S.td}><YNCell val={l.furnished}/></td>;
+      case"ac":        return<td key={key} style={S.td}><YNCell val={l.ac}/></td>;
+      case"floor":     return<td key={key} style={S.td}><YNCell val={l.floor_not_carpet}/></td>;
+      case"gym":       return<td key={key} style={S.td}><YNCell val={l.gym}/></td>;
+      case"housemates":return<td key={key} style={S.td}><YNCell val={l.housemates}/></td>;
+      case"simonRating":return<td key={key} style={S.td}>{l.simonRating?"★".repeat(Number(l.simonRating)):"—"}</td>;
+      case"katyRating":return<td key={key} style={S.td}>{l.katyRating?"★".repeat(Number(l.katyRating)):"—"}</td>;
+      case"sqft":      return<td key={key} style={S.td}>{l.sqft||"—"}</td>;
+      case"actions":   return<td key={key} style={S.td}><button style={S.iconBtn} onClick={()=>editListing(l)}>edit</button><button style={{...S.iconBtn,color:"#bc4749"}} onClick={()=>setConfirmDelete(l.id)}>del</button></td>;
+      default:         return<td key={key} style={S.td}>—</td>;
+    }
+  }
 
   return(
     <div>
@@ -399,6 +484,7 @@ function Hunt({pass,onLogout}){
           <input style={S_in} placeholder="Furnished"  value={d.furnished} onChange={e=>sd("furnished",e.target.value)}/>
           <input style={S_in} placeholder="AC"         value={d.ac}        onChange={e=>sd("ac",e.target.value)}/>
           <input style={S_in} placeholder="Floor not carpet"  value={d.floor_not_carpet} onChange={e=>sd("floor_not_carpet",e.target.value)}/>
+          <input style={S_in} placeholder="Gym"        value={d.gym}       onChange={e=>sd("gym",e.target.value)}/>
           <input style={S_in} placeholder="Housemates" value={d.housemates}onChange={e=>sd("housemates",e.target.value)}/>
           <StarSelect label="Simon's rating" value={d.simonRating} onChange={v=>sd("simonRating",v)}/>
           <StarSelect label="Katy's rating"  value={d.katyRating}  onChange={v=>sd("katyRating",v)}/>
@@ -426,6 +512,7 @@ function Hunt({pass,onLogout}){
             <span style={S.ctrlLabel}>Sort:</span>
             {[["price","Price"],["bikeMi","→Simon"],["driveMi","→Google"],["katyRating","Katy★"],["simonRating","Simon★"],["beds","Beds"],["sqft","Sqft"]].map(([k,lbl])=>
               <button key={k} style={chip(sortKey===k)} onClick={()=>setSortKey(k)}>{lbl}</button>)}
+            <span style={{fontSize:11,color:"#aaa",fontStyle:"italic",marginLeft:4}}>or click any column header · drag headers to reorder</span>
           </div>
         )}
       </div>
@@ -433,40 +520,41 @@ function Hunt({pass,onLogout}){
       {view==="table"&&(
         <div style={S.tableWrap}>
           <table style={S.table}>
-            <thead><tr>{TABLE_COLS.map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead>
+              <tr>
+                {colOrder.map(key=>{
+                  const col=ALL_COL_DEFS.find(c=>c.key===key);
+                  if(!col)return null;
+                  const isSortable=!!col.sortK;
+                  const isCurrentSort=sortKey===col.sortK;
+                  return(
+                    <th key={key}
+                      style={{...S.th,
+                        cursor:isSortable?"pointer":"grab",
+                        background:dragOverCol===key?"#ede9e0":undefined,
+                        color:isCurrentSort?"#e07a5f":undefined,
+                        userSelect:"none",
+                      }}
+                      draggable
+                      onDragStart={()=>{dragColRef.current=key;}}
+                      onDragOver={e=>{e.preventDefault();setDragOverCol(key);}}
+                      onDragLeave={()=>setDragOverCol(null)}
+                      onDrop={e=>{e.preventDefault();reorderCols(dragColRef.current,key);setDragOverCol(null);}}
+                      onClick={()=>{if(isSortable)setSortKey(col.sortK);}}
+                    >
+                      {col.header}{isCurrentSort?" ▲":""}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
             <tbody>
-              {rows.map(l=>{
-                const sc=STATUSES.find(s=>s.key===l.status)?.color||"#333";
-                const inBike =l.bikeMi !=null&&l.bikeMi <=anchors.bike.radiusMi;
-                const inDrive=l.driveMi!=null&&l.driveMi<=anchors.drive.radiusMi;
-                return(
-                  <tr key={l.id} style={S.tr}>
-                    <td style={S.td}><select value={l.status} onChange={e=>setStatus(l,e.target.value)} style={{...S.statusSel,color:sc,borderColor:sc}}>{STATUSES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></td>
-                    <td style={S.td}>{l.url?<a href={l.url} target="_blank" rel="noreferrer" style={S.link}>{l.title||"listing"}</a>:(l.title||"—")}</td>
-                    <td style={{...S.td,minWidth:180}}><EditableCell value={l.notes}        onSave={v=>updateListing(l.id,{notes:v})}        placeholder="apt notes…"/></td>
-                    <td style={{...S.td,minWidth:180}}><EditableCell value={l.contactNotes} onSave={v=>updateListing(l.id,{contactNotes:v})} placeholder="contact notes…"/></td>
-                    <td style={S.td}>{l.price?"$"+l.price:"—"}</td>
-                    <td style={S.td}>{(l.beds||"?")+"/"+(l.baths||"?")}</td>
-                    <td style={{...S.td,color:inBike?"#2a9d8f":"#bc4749",fontWeight:600}}>{f(l.bikeMi)}{!l.addressCertain&&l.bikeMi!=null&&<span style={{color:"#aaa",fontWeight:400}}> ~</span>}</td>
-                    <td style={{...S.td,color:inDrive?"#2a9d8f":"#bc4749",fontWeight:600}}>{f(l.driveMi)}{!l.addressCertain&&l.driveMi!=null&&<span style={{color:"#aaa",fontWeight:400}}> ~</span>}</td>
-                    <td style={S.td}><YNCell val={l.pets}/></td>
-                    <td style={S.td}><YNCell val={l.parking}/></td>
-                    <td style={S.td}><YNCell val={l.laundry}/></td>
-                    <td style={S.td}><YNCell val={l.furnished}/></td>
-                    <td style={S.td}><YNCell val={l.ac}/></td>
-                    <td style={S.td}><YNCell val={l.floor_not_carpet}/></td>
-                    <td style={S.td}><YNCell val={l.housemates}/></td>
-                    <td style={S.td}>{l.simonRating?"★".repeat(Number(l.simonRating)):"—"}</td>
-                    <td style={S.td}>{l.katyRating?"★".repeat(Number(l.katyRating)):"—"}</td>
-                    <td style={S.td}>{l.sqft||"—"}</td>
-                    <td style={S.td}>
-                      <button style={S.iconBtn} onClick={()=>editListing(l)}>edit</button>
-                      <button style={{...S.iconBtn,color:"#bc4749"}} onClick={()=>setConfirmDelete(l.id)}>del</button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {rows.length===0&&<tr><td colSpan={TABLE_COLS.length} style={{...S.td,textAlign:"center",padding:40,color:"#999"}}>No listings yet.</td></tr>}
+              {rows.map(l=>(
+                <tr key={l.id} style={S.tr}>
+                  {colOrder.map(key=>renderCell(l,key))}
+                </tr>
+              ))}
+              {rows.length===0&&<tr><td colSpan={colOrder.length} style={{...S.td,textAlign:"center",padding:40,color:"#999"}}>No listings yet.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -477,8 +565,8 @@ function Hunt({pass,onLogout}){
           <div style={S.legend}>
             {[anchors.bike,anchors.drive].map((a,i)=>(
               <span key={i} style={S.legendItem}>
-                <span style={{width:10,height:10,background:a.color,transform:"rotate(45deg)",display:"inline-block",flexShrink:0}}/>
-                {a.label}{!overlay?` (${a.radiusMi}mi)`:""}
+                <span style={{width:10,height:10,background:"#1a1a1a",transform:"rotate(45deg)",display:"inline-block",flexShrink:0}}/>
+                {a.label}{!displayOverlay?` (${a.radiusMi}mi)`:""}
               </span>
             ))}
             {STATUSES.map(s=><span key={s.key} style={S.legendItem}><span style={{...S.dot,background:s.color,border:"2px solid #eee"}}/> {s.label}</span>)}
@@ -486,11 +574,25 @@ function Hunt({pass,onLogout}){
           </div>
           <div ref={mapRef} style={S.map}/>
           <div style={S.overlayBar}>
-            <label style={S.uploadBtn}>{overlay?"Replace isochrone image":"Upload isochrone image"}<input type="file" accept="image/*" onChange={handleImageUpload} style={{display:"none"}}/></label>
-            {overlay&&<button style={S.ghost} onClick={()=>saveOverlay(null)}>Remove image (show rings)</button>}
-            {overlay&&<span style={S.hint}>Drag the SW & NE corner pins to align.</span>}
+            {/* State 1: no overlay at all */}
+            {!pendingOverlay&&!overlay&&(
+              <label style={S.uploadBtn}>Upload isochrone image<input type="file" accept="image/*" onChange={handleImageUpload} style={{display:"none"}}/></label>
+            )}
+            {/* State 2: image uploaded, not yet frozen */}
+            {pendingOverlay&&(<>
+              <button style={S.primary} onClick={()=>{saveOverlay(pendingOverlay);setPendingOverlay(null);}}>Freeze image (make permanent)</button>
+              <span style={S.hint}>Drag the SW &amp; NE corner pins to align, then freeze.</span>
+            </>)}
+            {/* State 3/4: frozen overlay exists */}
+            {!pendingOverlay&&overlay&&(<>
+              <label style={S.uploadBtn}>Replace image<input type="file" accept="image/*" onChange={handleImageUpload} style={{display:"none"}}/></label>
+              <button style={S.ghost} onClick={()=>{saveOverlay(null);setOverlayHidden(false);}}>Remove image</button>
+              <button style={S.ghost} onClick={()=>setOverlayHidden(h=>!h)}>
+                {overlayHidden?"Show image":"Hide image (show rings)"}
+              </button>
+            </>)}
           </div>
-          {!overlay&&(
+          {!displayOverlay&&(
             <div style={S.anchorEdit}>
               {["bike","drive"].map(k=>(
                 <label key={k} style={S.anchorLabel}>{anchors[k].label} radius (mi):
@@ -511,7 +613,6 @@ function Hunt({pass,onLogout}){
 const ink="#1a1a1a",paper="#f4f1ea",accent="#e07a5f",line="#dcd6c8";
 const tab=on=>({padding:"8px 18px",border:"none",cursor:"pointer",background:on?ink:"transparent",color:on?paper:ink,fontWeight:600,fontSize:14});
 const chip=(on,c=ink)=>({padding:"4px 12px",border:`1.5px solid ${on?c:line}`,borderRadius:20,cursor:"pointer",background:on?c:"transparent",color:on?"#fff":"#555",fontSize:12,fontWeight:600});
-const TABLE_COLS=["Status","Title","Notes","Contact notes","Price","Bd/Ba","→Simon (mi)","→Google (mi)","Pets","Parking","Laundry","Furnished","AC","Floor not carpet","Housemates","Simon★","Katy★","Sqft",""];
 const S={
   overlay:    {position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999},
   dialog:     {background:"#fffdf8",border:`1.5px solid ${line}`,borderRadius:6,padding:"28px 32px",maxWidth:360,width:"90%",boxShadow:"0 8px 32px rgba(0,0,0,.18)"},

@@ -1,0 +1,8 @@
+2026-06-06 21:31:42 find /Users/katyblumer/repos/Apt-tracker -type f -name ".*" -prune -o -type f \( -name "*.html" -o -name "*.js" -o -name "*.css" -o -name "*.json" -o -name "*.md" \) -print | head -50
+---
+2026-06-06 21:31:45 find /Users/katyblumer/repos/Apt-tracker -type f | sort
+---
+2026-06-06 21:31:48 ls -la /Users/katyblumer/repos/Apt-tracker/ | grep -v "^d.*\.git"
+---
+2026-06-06 21:31:53 find /Users/katyblumer/repos/Apt-tracker/agent_docs -type f
+---
