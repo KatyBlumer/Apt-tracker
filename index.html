@@ -184,7 +184,7 @@ const blankDraft=()=>({
 
 function App(){
   const [pass,setPass]=useState(()=>localStorage.getItem(PASS_KEY)||"");
-  const [authed,setAuthed]=useState(false);
+  const [authed,setAuthed]=useState(()=>!!localStorage.getItem(PASS_KEY));
   const [pi,setPi]=useState("");
   if(!authed)return<Gate value={pi} onChange={setPi} onEnter={()=>{if(pi.trim()){localStorage.setItem(PASS_KEY,pi.trim());setPass(pi.trim());setAuthed(true);}}}/>;
   return<Hunt pass={pass} onLogout={()=>{localStorage.removeItem(PASS_KEY);setAuthed(false);setPi("");}}/>;
@@ -269,15 +269,27 @@ function Hunt({pass,onLogout}){
   function editListing(l){setDraft({...l});setEditingId(l.id);setView("table");window.scrollTo(0,0);}
   const setStatus=(l,status)=>window.FB.saveListing(pass,{...l,status}).catch(console.error);
 
-  // Upload sets pendingOverlay (local only, not frozen yet)
+  // Upload sets pendingOverlay (local only, not frozen yet).
+  // Image is compressed to JPEG ≤800px wide so it fits in Firestore's 1MB doc limit.
   function handleImageUpload(e){
     const file=e.target.files?.[0];if(!file)return;
-    e.target.value=""; // reset so same file can be re-chosen
+    e.target.value="";
     const reader=new FileReader();
     reader.onload=()=>{
-      const map=mapInstance.current;
-      const c=map?map.getCenter():{lat:DEFAULT_ANCHORS.drive.lat,lng:DEFAULT_ANCHORS.drive.lng};
-      setPendingOverlay({dataUrl:reader.result,bounds:[[c.lat-0.06,c.lng-0.08],[c.lat+0.06,c.lng+0.08]]});
+      const img=new Image();
+      img.onload=()=>{
+        const MAX=800;
+        const scale=img.width>MAX?MAX/img.width:1;
+        const canvas=document.createElement("canvas");
+        canvas.width=Math.round(img.width*scale);
+        canvas.height=Math.round(img.height*scale);
+        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+        const dataUrl=canvas.toDataURL("image/jpeg",0.75);
+        const map=mapInstance.current;
+        const c=map?map.getCenter():{lat:DEFAULT_ANCHORS.drive.lat,lng:DEFAULT_ANCHORS.drive.lng};
+        setPendingOverlay({dataUrl,bounds:[[c.lat-0.06,c.lng-0.08],[c.lat+0.06,c.lng+0.08]]});
+      };
+      img.src=reader.result;
     };
     reader.readAsDataURL(file);
   }
