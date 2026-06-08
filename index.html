@@ -411,7 +411,12 @@ function Hunt({pass,onLogout}){
             ${l.url?`<a href="${l.url}" target="_blank" style="font-size:11px;color:#e07a5f">open listing ↗</a>`:""}
           </div>
         </div>`;
-        map._custom.push(L.circleMarker([l.lat,l.lng],{radius:rad,color:"#fff",weight:2,fillColor:sc,fillOpacity:0.92}).addTo(map).bindPopup(popup,{maxWidth:260}));
+        const priceLabel=l.price?`$${Math.round(Number(l.price)/100)*100/1000}k`:"";
+        const dotIcon=L.divIcon({
+          html:`<div style="width:${rad*2}px;height:${rad*2}px;border-radius:50%;background:${sc};border:2px solid #fff;box-sizing:border-box;display:flex;align-items:center;justify-content:center;"><span style="color:#fff;font-size:7px;font-weight:700;line-height:1;white-space:nowrap;">${priceLabel}</span></div>`,
+          className:"",iconSize:[rad*2,rad*2],iconAnchor:[rad,rad],
+        });
+        map._custom.push(L.marker([l.lat,l.lng],{icon:dotIcon}).addTo(map).bindPopup(popup,{maxWidth:260}));
       });
     }
     if(leafletReady.current){setTimeout(init,50);return;}
