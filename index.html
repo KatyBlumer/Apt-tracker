@@ -220,6 +220,7 @@ function Hunt({pass,onLogout}){
   const [parseErr,setParseErr]=useState("");
   const [sortKey,setSortKey]=useState("price");
   const [filterStatus,setFilterStatus]=useState("all");
+  const [hideRejected,setHideRejected]=useState(true);
   const [confirmDelete,setConfirmDelete]=useState(null);
   const [colOrder,setColOrder]=useState(()=>{
     try{const s=localStorage.getItem("col-order");return s?JSON.parse(s):DEFAULT_COL_ORDER;}
@@ -300,14 +301,16 @@ function Hunt({pass,onLogout}){
       bikeMi: l.lat!=null?distMi(l,anchors.bike):null,
       driveMi:l.lat!=null?distMi(l,anchors.drive):null,
     }));
-    const filtered=filterStatus==="all"?enriched:enriched.filter(l=>l.status===filterStatus);
+    const HIDDEN_STATUSES=["rejected","rejected_them","deleted"];
+    let filtered=filterStatus==="all"?enriched:enriched.filter(l=>l.status===filterStatus);
+    if(hideRejected)filtered=filtered.filter(l=>!HIDDEN_STATUSES.includes(l.status));
     return filtered.sort((a,b)=>{
       const av=a[sortKey],bv=b[sortKey];
       if(av==null||av==="")return 1;if(bv==null||bv==="")return -1;
       if(["price","sqft","bikeMi","driveMi","katyRating","simonRating"].includes(sortKey))return parseFloat(av)-parseFloat(bv);
       return String(av).localeCompare(String(bv));
     });
-  },[listings,anchors,sortKey,filterStatus]);
+  },[listings,anchors,sortKey,filterStatus,hideRejected]);
 
   // Effective overlay shown on map
   const displayOverlay = pendingOverlay || (!overlayHidden && overlay) || null;
@@ -527,6 +530,11 @@ function Hunt({pass,onLogout}){
           <span style={S.ctrlLabel}>Filter:</span>
           <button style={chip(filterStatus==="all")} onClick={()=>setFilterStatus("all")}>All</button>
           {STATUSES.map(s=><button key={s.key} style={chip(filterStatus===s.key,s.color)} onClick={()=>setFilterStatus(s.key)}>{s.label}</button>)}
+          <span style={{marginLeft:8,borderLeft:`1.5px solid ${line}`,paddingLeft:8}}>
+            <button style={chip(!hideRejected,"#bc4749")} onClick={()=>setHideRejected(h=>!h)}>
+              {hideRejected?"Show rejected/deleted":"Hide rejected/deleted"}
+            </button>
+          </span>
         </div>
         {view==="table"&&(
           <div style={S.filterRow}>
