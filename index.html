@@ -221,6 +221,7 @@ function Hunt({pass,onLogout}){
   const [sortKey,setSortKey]=useState("price");
   const [filterStatus,setFilterStatus]=useState("all");
   const [hideRejected,setHideRejected]=useState(true);
+  const [overlayErr,setOverlayErr]=useState("");
   const [confirmDelete,setConfirmDelete]=useState(null);
   const [colOrder,setColOrder]=useState(()=>{
     try{const s=localStorage.getItem("col-order");return s?JSON.parse(s):DEFAULT_COL_ORDER;}
@@ -241,7 +242,15 @@ function Hunt({pass,onLogout}){
 
   const saveMeta=p=>window.FB.saveMeta(pass,p).catch(console.error);
   const saveAnchors=n=>{setAnchors(n);saveMeta({anchors:n});};
-  const saveOverlay=n=>{setOverlay(n);saveMeta({overlay:n});};
+  const saveOverlayToFirestore=n=>{
+    setOverlayErr("");
+    window.FB.saveMeta(pass,{overlay:n}).catch(err=>{
+      console.error(err);
+      setOverlayErr("Save failed: "+((err?.message)||"unknown error")+". Try a smaller image.");
+      setOverlay(null);
+    });
+  };
+  const saveOverlay=n=>{setOverlay(n);saveOverlayToFirestore(n);};
   const updateListing=(id,patch)=>{
     const l=listings.find(x=>x.id===id);
     if(l)window.FB.saveListing(pass,{...l,...patch}).catch(console.error);
@@ -272,21 +281,22 @@ function Hunt({pass,onLogout}){
   const setStatus=(l,status)=>window.FB.saveListing(pass,{...l,status}).catch(console.error);
 
   // Upload sets pendingOverlay (local only, not frozen yet).
-  // Image is compressed to JPEG ≤800px wide so it fits in Firestore's 1MB doc limit.
+  // Image is compressed to JPEG ≤800px on longest side to fit Firestore's 1MB doc limit.
   function handleImageUpload(e){
     const file=e.target.files?.[0];if(!file)return;
     e.target.value="";
+    setOverlayErr("");
     const reader=new FileReader();
     reader.onload=()=>{
       const img=new Image();
       img.onload=()=>{
         const MAX=800;
-        const scale=img.width>MAX?MAX/img.width:1;
+        const scale=Math.min(1,MAX/Math.max(img.width,img.height));
         const canvas=document.createElement("canvas");
         canvas.width=Math.round(img.width*scale);
         canvas.height=Math.round(img.height*scale);
         canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
-        const dataUrl=canvas.toDataURL("image/jpeg",0.75);
+        const dataUrl=canvas.toDataURL("image/jpeg",0.7);
         const map=mapInstance.current;
         const c=map?map.getCenter():{lat:DEFAULT_ANCHORS.drive.lat,lng:DEFAULT_ANCHORS.drive.lng};
         setPendingOverlay({dataUrl,bounds:[[c.lat-0.06,c.lng-0.08],[c.lat+0.06,c.lng+0.08]]});
@@ -603,6 +613,7 @@ function Hunt({pass,onLogout}){
           </div>
           <div ref={mapRef} style={S.map}/>
           <div style={S.overlayBar}>
+            {overlayErr&&<span style={{color:"#bc4749",fontSize:13}}>{overlayErr}</span>}
             {/* State 1: no overlay at all */}
             {!pendingOverlay&&!overlay&&(
               <label style={S.uploadBtn}>Upload isochrone image<input type="file" accept="image/*" onChange={handleImageUpload} style={{display:"none"}}/></label>
