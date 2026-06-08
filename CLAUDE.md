@@ -58,11 +58,9 @@ Add `hideByDefault:true` to include it in the "hide rejected/deleted" toggle.
 
 ## Key implementation details
 
-**Authentication:** Shared passphrase stored in `localStorage` under `"apt-hunt-pass"`. The passphrase is used directly as the Firestore document path (`hunts/{pass}/...`). No hashing.
+**Authentication:** Shared passphrase stored in localStorage. Used as a Firestore path component to namespace data per workspace.
 
-**Firestore structure:**
-- `hunts/{pass}/listings/{id}` — individual apartment listings
-- `hunts/{pass}/meta/config` — anchors, overlay image
+**Firestore structure:** Two subcollections per workspace — one for listings, one for meta/config (anchors, overlay image).
 
 **Isochrone overlay:** Stored as base64 JPEG in Firestore. Images are compressed to ≤800px on the longest side at 0.7 quality before saving. Firestore doesn't support nested arrays, so bounds `[[s,w],[n,e]]` are stored flat as `{s, w, nn, e}` and reconstructed on load.
 
