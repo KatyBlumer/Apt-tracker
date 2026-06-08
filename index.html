@@ -235,7 +235,11 @@ function Hunt({pass,onLogout}){
     const u1=window.FB.subscribe(pass,setListings);
     const u2=window.FB.subscribeMeta(pass,m=>{
       if(m?.anchors)setAnchors(m.anchors);
-      if(m?.overlay!==undefined)setOverlay(m.overlay);
+      if(m?.overlay!==undefined){
+        const ov=m.overlay;
+        // Stored with flattened bounds {s,w,nn,e}; reconstruct nested array form
+        setOverlay(ov&&ov.s!=null?{dataUrl:ov.dataUrl,bounds:[[ov.s,ov.w],[ov.nn,ov.e]]}:ov);
+      }
     });
     return()=>{u1&&u1();u2&&u2();};
   },[pass]);
@@ -244,7 +248,9 @@ function Hunt({pass,onLogout}){
   const saveAnchors=n=>{setAnchors(n);saveMeta({anchors:n});};
   const saveOverlayToFirestore=n=>{
     setOverlayErr("");
-    window.FB.saveMeta(pass,{overlay:n}).catch(err=>{
+    // Firestore doesn't support nested arrays, so flatten bounds to {s,w,n,e}
+    const payload=n?{dataUrl:n.dataUrl,s:n.bounds[0][0],w:n.bounds[0][1],nn:n.bounds[1][0],e:n.bounds[1][1]}:null;
+    window.FB.saveMeta(pass,{overlay:payload}).catch(err=>{
       console.error(err);
       setOverlayErr("Save failed: "+((err?.message)||"unknown error")+". Try a smaller image.");
       setOverlay(null);
