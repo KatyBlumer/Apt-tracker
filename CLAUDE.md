@@ -19,6 +19,8 @@ Workaround: Netlify offers unlimited **branch deploys**, but the preview URL cha
 
 This is fine for now — share the latest branch deploy URL with my boyfriend to preview changes mid-month.
 
+**Important:** Always commit new changes to the same existing feature branch (do not delete it or create new branches). This keeps a stable branch deploy URL on Netlify.
+
 ## Development notes
 
 - Edit `index.html` directly — there is no build/compile step.
