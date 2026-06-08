@@ -58,6 +58,16 @@ const DEFAULT_ANCHORS = {
   bike:  { label:"Simon — 3105 Patrick Henry Dr", lat:37.3965109149257, lng:-121.98442283299973, radiusMi:3.5,  color:"#e07a5f" },
   drive: { label:"Katy — Google MTV",             lat:37.422,  lng:-122.0841, radiusMi:13,   color:"#3d5a80" },
 };
+const POI_TYPES = [
+  { key:"grocery",   label:"Grocery",    emoji:"🛒" },
+  { key:"restaurant",label:"Restaurant", emoji:"🍽️" },
+  { key:"cafe",      label:"Cafe",       emoji:"☕" },
+  { key:"park",      label:"Park",       emoji:"🌳" },
+  { key:"transit",   label:"Transit",    emoji:"🚇" },
+  { key:"gym",       label:"Gym",        emoji:"💪" },
+  { key:"medical",   label:"Medical",    emoji:"🏥" },
+  { key:"other",     label:"Other POI",  emoji:"📍" },
+];
 const STATUSES = [
   { key:"new",       label:"New",       color:"#8d99ae" },
   { key:"contacted", label:"Contacted", color:"#e9c46a" },
@@ -180,7 +190,7 @@ const blankDraft=()=>({
   id:null,url:"",title:"",address:"",addressCertain:false,
   price:"",beds:"",baths:"",sqft:"",pets:"",parking:"",laundry:"",
   furnished:"",ac:"",floor_not_carpet:"",gym:"",housemates:"",simonRating:"",katyRating:"",
-  status:"new",notes:"",contactNotes:"",lat:null,lng:null
+  status:"new",poiType:"",notes:"",contactNotes:"",lat:null,lng:null
 });
 
 function App(){
@@ -312,8 +322,10 @@ function Hunt({pass,onLogout}){
     reader.readAsDataURL(file);
   }
 
+  const pois=useMemo(()=>listings.filter(l=>l.poiType),[listings]);
+
   const rows=useMemo(()=>{
-    const enriched=listings.map(l=>({...l,
+    const enriched=listings.filter(l=>!l.poiType).map(l=>({...l,
       bikeMi: l.lat!=null?distMi(l,anchors.bike):null,
       driveMi:l.lat!=null?distMi(l,anchors.drive):null,
     }));
@@ -418,6 +430,17 @@ function Hunt({pass,onLogout}){
         });
         map._custom.push(L.marker([l.lat,l.lng],{icon:dotIcon}).addTo(map).bindPopup(popup,{maxWidth:260}));
       });
+
+      pois.forEach(p=>{
+        if(p.lat==null)return;
+        const poi=POI_TYPES.find(t=>t.key===p.poiType)||POI_TYPES[POI_TYPES.length-1];
+        const poiIcon=L.divIcon({
+          html:`<div style="font-size:20px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));" title="${p.title||poi.label}">${poi.emoji}</div>`,
+          className:"",iconSize:[24,24],iconAnchor:[12,12],
+        });
+        const poiPopup=`<div style="font-family:Georgia,serif"><b>${p.title||poi.label}</b><br><span style="font-size:11px;color:#8a8276">${poi.emoji} ${poi.label}</span>${p.notes?`<div style="font-size:12px;color:#555;margin-top:4px">${p.notes}</div>`:""}<div style="margin-top:5px"><a href="#" onclick="window._editListing('${p.id}');return false;" style="font-size:11px;color:#8a8276">edit ✎</a></div></div>`;
+        map._custom.push(L.marker([p.lat,p.lng],{icon:poiIcon}).addTo(map).bindPopup(poiPopup,{maxWidth:220}));
+      });
     }
     if(leafletReady.current){setTimeout(init,50);return;}
     if(window.L){leafletReady.current=true;setTimeout(init,50);}
@@ -427,7 +450,7 @@ function Hunt({pass,onLogout}){
       sc.onload=()=>{leafletReady.current=true;setTimeout(init,50);};
       document.body.appendChild(sc);
     }
-  },[view,rows,anchors,displayOverlay,showDragHandles]);
+  },[view,rows,pois,anchors,displayOverlay,showDragHandles]);
 
   const f=n=>n==null?"—":n.toFixed(1);
   const YNCell=({val})=>val?<span style={ynStyle(val)}>{val}</span>:<span style={{color:"#bbb"}}>—</span>;
@@ -533,8 +556,12 @@ function Hunt({pass,onLogout}){
           <input style={S_in} placeholder="Housemates" value={d.housemates}onChange={e=>sd("housemates",e.target.value)}/>
           <StarSelect label="Simon's rating" value={d.simonRating} onChange={v=>sd("simonRating",v)}/>
           <StarSelect label="Katy's rating"  value={d.katyRating}  onChange={v=>sd("katyRating",v)}/>
-          <select style={{...S_in}} value={d.status} onChange={e=>sd("status",e.target.value)}>
+          <select style={{...S_in}} value={d.status} onChange={e=>sd("status",e.target.value)} disabled={!!d.poiType}>
             {STATUSES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+          <select style={{...S_in}} value={d.poiType||""} onChange={e=>sd("poiType",e.target.value)}>
+            <option value="">— Not a POI —</option>
+            {POI_TYPES.map(t=><option key={t.key} value={t.key}>{t.emoji} {t.label}</option>)}
           </select>
           <div style={{gridColumn:"span 3"}}/>
           <textarea style={{...S_in,gridColumn:"span 4",minHeight:50,resize:"vertical"}} placeholder="Notes (apartment)" value={d.notes} onChange={e=>sd("notes",e.target.value)}/>
