@@ -58,53 +58,86 @@ const DEFAULT_ANCHORS = {
   bike:  { label:"Simon — 3105 Patrick Henry Dr", lat:37.3965109149257, lng:-121.98442283299973, radiusMi:3.5,  color:"#e07a5f" },
   drive: { label:"Katy — Google MTV",             lat:37.422,  lng:-122.0841, radiusMi:13,   color:"#3d5a80" },
 };
-const POI_TYPES = [
-  { key:"grocery",   label:"Grocery",    emoji:"🛒" },
-  { key:"restaurant",label:"Restaurant", emoji:"🍽️" },
-  { key:"cafe",      label:"Cafe",       emoji:"☕" },
-  { key:"park",      label:"Park",       emoji:"🌳" },
-  { key:"transit",   label:"Transit",    emoji:"🚇" },
-  { key:"gym",       label:"Gym",        emoji:"💪" },
-  { key:"medical",   label:"Medical",    emoji:"🏥" },
-  { key:"other",     label:"Other POI",  emoji:"📍" },
-];
-const STATUSES = [
-  { key:"new",       label:"New",       color:"#8d99ae" },
-  { key:"contacted", label:"Contacted", color:"#e9c46a" },
-  { key:"responded", label:"Responded", color:"#7b5ea7" },
-  { key:"toured",    label:"Toured",    color:"#2a9d8f" },
-  { key:"favorite",  label:"Favorite",  color:"#e07a5f" },
-  { key:"rejected",  label:"Rejected - we did",  color:"#bc4749" },
-  { key:"rejected_them", label:"Rejected - they did", color:"#e07a5f" },
-  { key:"deleted",   label:"Deleted",   color:"#6b6b6b" },
-];
-const YN_FIELDS = ["pets","parking","laundry","furnished","ac","housemates","floor_not_carpet","gym"];
-const PASS_KEY = "apt-hunt-pass";
 
-// Column definitions for the table
-const ALL_COL_DEFS = [
-  {key:"status",       header:"Status"},
-  {key:"title",        header:"Title"},
-  {key:"notes",        header:"Notes"},
-  {key:"contactNotes", header:"Contact notes"},
-  {key:"price",        header:"Price",            sortK:"price"},
-  {key:"bdba",         header:"Bd/Ba",             sortK:"beds"},
-  {key:"bikeMi",       header:"→Simon (mi)",       sortK:"bikeMi"},
-  {key:"driveMi",      header:"→Google (mi)",      sortK:"driveMi"},
-  {key:"pets",         header:"Pets"},
-  {key:"parking",      header:"Parking"},
-  {key:"laundry",      header:"Laundry"},
-  {key:"furnished",    header:"Furnished"},
-  {key:"ac",           header:"AC"},
-  {key:"floor",        header:"Floor not carpet"},
-  {key:"gym",          header:"Gym"},
-  {key:"housemates",   header:"Housemates"},
-  {key:"simonRating",  header:"Simon★",            sortK:"simonRating"},
-  {key:"katyRating",   header:"Katy★",             sortK:"katyRating"},
-  {key:"sqft",         header:"Sqft",              sortK:"sqft"},
-  {key:"actions",      header:""},
+// To add a new POI type: add one entry here. No other changes needed.
+const POI_TYPES = [
+  { key:"grocery",    label:"Grocery",    emoji:"🛒" },
+  { key:"restaurant", label:"Restaurant", emoji:"🍽️" },
+  { key:"cafe",       label:"Cafe",       emoji:"☕" },
+  { key:"park",       label:"Park",       emoji:"🌳" },
+  { key:"transit",    label:"Transit",    emoji:"🚇" },
+  { key:"gym",        label:"Gym",        emoji:"💪" },
+  { key:"medical",    label:"Medical",    emoji:"🏥" },
+  { key:"other",      label:"Other POI",  emoji:"📍" },
 ];
-const DEFAULT_COL_ORDER = ALL_COL_DEFS.map(c => c.key);
+
+// To add a new status: add one entry here. Set hideByDefault:true to hide it by default.
+// No other changes needed.
+const STATUSES = [
+  { key:"new",          label:"New",                color:"#8d99ae" },
+  { key:"contacted",    label:"Contacted",          color:"#e9c46a" },
+  { key:"responded",    label:"Responded",          color:"#7b5ea7" },
+  { key:"toured",       label:"Toured",             color:"#2a9d8f" },
+  { key:"favorite",     label:"Favorite",           color:"#e07a5f" },
+  { key:"rejected",     label:"Rejected - we did",  color:"#bc4749", hideByDefault:true },
+  { key:"rejected_them",label:"Rejected - they did",color:"#e07a5f", hideByDefault:true },
+  { key:"deleted",      label:"Deleted",            color:"#6b6b6b", hideByDefault:true },
+];
+
+// To add a new column / form field: add one entry here. No other changes needed.
+//
+// type:         "yn"       → Y/N/? colored cell + text input in form
+//               "text"     → plain text cell + text input in form
+//               "price"    → "$X" cell + text input in form
+//               "editable" → inline-editable cell + textarea in form
+//               "stars"    → ★ rating cell + StarSelect in form
+//               "distance" → colored distance cell (no form input)
+//               "bdba"     → combined beds/baths cell (no form input; beds/baths have own entries)
+//               "status"   → status dropdown cell (special)
+//               "title"    → linked title cell (special)
+//               "actions"  → edit/delete buttons (special)
+//
+// field:        listing field key this column reads/writes
+// anchor:       for type="distance", which anchor ("bike"|"drive")
+// sortK:        sort key used in the sort bar
+// numericSort:  true → parse as float when sorting
+// sortLabel:    short label for sort bar (falls back to header)
+// formPlaceholder: if set, auto-generates a text input in the form
+// formLabel:    if set on type="stars", auto-generates a StarSelect in the form
+// tableHidden:  if true, excluded from DEFAULT_COL_ORDER (still used for form/popup)
+const ALL_COL_DEFS = [
+  {key:"status",       header:"Status",           type:"status"},
+  {key:"title",        header:"Title",            type:"title"},
+  {key:"price",        header:"Price",            type:"price",    field:"price",           sortK:"price",      numericSort:true, formPlaceholder:"Price $"},
+  {key:"beds",         header:"Beds",             type:"text",     field:"beds",            sortK:"beds",       numericSort:true, formPlaceholder:"Beds",             tableHidden:true},
+  {key:"baths",        header:"Baths",            type:"text",     field:"baths",                                                formPlaceholder:"Baths",            tableHidden:true},
+  {key:"sqft",         header:"Sqft",             type:"text",     field:"sqft",            sortK:"sqft",       numericSort:true, formPlaceholder:"Sqft"},
+  {key:"pets",         header:"Pets",             type:"yn",       field:"pets",                                                 formPlaceholder:"Pets"},
+  {key:"parking",      header:"Parking",          type:"yn",       field:"parking",                                              formPlaceholder:"Parking"},
+  {key:"laundry",      header:"Laundry",          type:"yn",       field:"laundry",                                              formPlaceholder:"Laundry"},
+  {key:"furnished",    header:"Furnished",        type:"yn",       field:"furnished",                                            formPlaceholder:"Furnished"},
+  {key:"ac",           header:"AC",               type:"yn",       field:"ac",                                                   formPlaceholder:"AC"},
+  {key:"floor",        header:"Floor not carpet", type:"yn",       field:"floor_not_carpet",                                     formPlaceholder:"Floor not carpet"},
+  {key:"gym",          header:"Gym",              type:"yn",       field:"gym",                                                  formPlaceholder:"Gym"},
+  {key:"housemates",   header:"Housemates",       type:"yn",       field:"housemates",                                           formPlaceholder:"Housemates"},
+  {key:"simonRating",  header:"Simon★",           type:"stars",    field:"simonRating",     sortK:"simonRating",numericSort:true, formLabel:"Simon's rating"},
+  {key:"katyRating",   header:"Katy★",            type:"stars",    field:"katyRating",      sortK:"katyRating", numericSort:true, formLabel:"Katy's rating"},
+  {key:"notes",        header:"Notes",            type:"editable", field:"notes",                                                formPlaceholder:"Notes (apartment)"},
+  {key:"contactNotes", header:"Contact notes",    type:"editable", field:"contactNotes",                                         formPlaceholder:"Contact notes (emails, calls, follow-ups)"},
+  {key:"bdba",         header:"Bd/Ba",            type:"bdba",                              sortK:"beds",       numericSort:true, sortLabel:"Beds"},
+  {key:"bikeMi",       header:"→Simon (mi)",      type:"distance", anchor:"bike",           sortK:"bikeMi",     numericSort:true, sortLabel:"→Simon"},
+  {key:"driveMi",      header:"→Google (mi)",     type:"distance", anchor:"drive",          sortK:"driveMi",    numericSort:true, sortLabel:"→Google"},
+  {key:"actions",      header:"",                 type:"actions"},
+];
+
+// Table column order for first-time users. Existing users keep their localStorage order.
+const DEFAULT_COL_ORDER = [
+  "status","title","notes","contactNotes","price","bdba","bikeMi","driveMi",
+  "pets","parking","laundry","furnished","ac","floor","gym","housemates",
+  "simonRating","katyRating","sqft","actions",
+];
+
+const PASS_KEY = "apt-hunt-pass";
 
 function distMi(a,b) {
   if(a.lat==null||b.lat==null)return null;
@@ -186,12 +219,13 @@ function StarSelect({value,onChange,label}){
   );
 }
 
-const blankDraft=()=>({
-  id:null,url:"",title:"",address:"",addressCertain:false,
-  price:"",beds:"",baths:"",sqft:"",pets:"",parking:"",laundry:"",
-  furnished:"",ac:"",floor_not_carpet:"",gym:"",housemates:"",simonRating:"",katyRating:"",
-  status:"new",poiType:"",notes:"",contactNotes:"",lat:null,lng:null
-});
+// blankDraft derives all listing fields from ALL_COL_DEFS — adding a column with a field
+// automatically gives it a blank default.
+const blankDraft=()=>{
+  const fieldDefaults=ALL_COL_DEFS.reduce((acc,c)=>c.field?{...acc,[c.field]:""}:acc,{});
+  return {id:null,url:"",title:"",address:"",addressCertain:false,
+    status:"new",poiType:"",lat:null,lng:null,...fieldDefaults};
+};
 
 function App(){
   const [pass,setPass]=useState(()=>localStorage.getItem(PASS_KEY)||"");
@@ -218,9 +252,9 @@ function Gate({value,onChange,onEnter}){
 function Hunt({pass,onLogout}){
   const [listings,setListings]=useState([]);
   const [anchors,setAnchors]=useState(DEFAULT_ANCHORS);
-  const [overlay,setOverlay]=useState(null);           // frozen (Firebase-persisted) overlay
-  const [pendingOverlay,setPendingOverlay]=useState(null); // local-only, not yet frozen
-  const [overlayHidden,setOverlayHidden]=useState(false);  // hide frozen overlay temporarily
+  const [overlay,setOverlay]=useState(null);
+  const [pendingOverlay,setPendingOverlay]=useState(null);
+  const [overlayHidden,setOverlayHidden]=useState(false);
   const [view,setView]=useState("table");
   const [draft,setDraft]=useState(blankDraft());
   const [editingId,setEditingId]=useState(null);
@@ -247,7 +281,6 @@ function Hunt({pass,onLogout}){
       if(m?.anchors)setAnchors(m.anchors);
       if(m?.overlay!==undefined){
         const ov=m.overlay;
-        // Stored with flattened bounds {s,w,nn,e}; reconstruct nested array form
         setOverlay(ov&&ov.s!=null?{dataUrl:ov.dataUrl,bounds:[[ov.s,ov.w],[ov.nn,ov.e]]}:ov);
       }
     });
@@ -258,7 +291,6 @@ function Hunt({pass,onLogout}){
   const saveAnchors=n=>{setAnchors(n);saveMeta({anchors:n});};
   const saveOverlayToFirestore=n=>{
     setOverlayErr("");
-    // Firestore doesn't support nested arrays, so flatten bounds to {s,w,n,e}
     const payload=n?{dataUrl:n.dataUrl,s:n.bounds[0][0],w:n.bounds[0][1],nn:n.bounds[1][0],e:n.bounds[1][1]}:null;
     window.FB.saveMeta(pass,{overlay:payload}).catch(err=>{
       console.error(err);
@@ -296,8 +328,6 @@ function Hunt({pass,onLogout}){
   function editListing(l){setDraft({...l});setEditingId(l.id);setView("table");window.scrollTo(0,0);}
   const setStatus=(l,status)=>window.FB.saveListing(pass,{...l,status}).catch(console.error);
 
-  // Upload sets pendingOverlay (local only, not frozen yet).
-  // Image is compressed to JPEG ≤800px on longest side to fit Firestore's 1MB doc limit.
   function handleImageUpload(e){
     const file=e.target.files?.[0];if(!file)return;
     e.target.value="";
@@ -326,23 +356,23 @@ function Hunt({pass,onLogout}){
 
   const rows=useMemo(()=>{
     const enriched=listings.filter(l=>!l.poiType).map(l=>({...l,
-      bikeMi: l.lat!=null?distMi(l,anchors.bike):null,
+      bikeMi:l.lat!=null?distMi(l,anchors.bike):null,
       driveMi:l.lat!=null?distMi(l,anchors.drive):null,
     }));
-    const HIDDEN_STATUSES=["rejected","rejected_them","deleted"];
+    const hiddenStatuses=STATUSES.filter(s=>s.hideByDefault).map(s=>s.key);
     let filtered=filterStatus==="all"?enriched:enriched.filter(l=>l.status===filterStatus);
-    if(hideRejected)filtered=filtered.filter(l=>!HIDDEN_STATUSES.includes(l.status));
+    if(hideRejected)filtered=filtered.filter(l=>!hiddenStatuses.includes(l.status));
     return filtered.sort((a,b)=>{
       const av=a[sortKey],bv=b[sortKey];
       if(av==null||av==="")return 1;if(bv==null||bv==="")return -1;
-      if(["price","sqft","bikeMi","driveMi","katyRating","simonRating"].includes(sortKey))return parseFloat(av)-parseFloat(bv);
+      const sortCol=ALL_COL_DEFS.find(c=>c.sortK===sortKey);
+      if(sortCol?.numericSort)return parseFloat(av)-parseFloat(bv);
       return String(av).localeCompare(String(bv));
     });
   },[listings,anchors,sortKey,filterStatus,hideRejected]);
 
-  // Effective overlay shown on map
-  const displayOverlay = pendingOverlay || (!overlayHidden && overlay) || null;
-  const showDragHandles = !!pendingOverlay; // only show drag handles when image is not yet frozen
+  const displayOverlay=pendingOverlay||(!overlayHidden&&overlay)||null;
+  const showDragHandles=!!pendingOverlay;
 
   useEffect(()=>{
     if(view!=="map")return;
@@ -367,7 +397,6 @@ function Hunt({pass,onLogout}){
       if(displayOverlay){
         if(overlayLayer.current)map.removeLayer(overlayLayer.current);
         overlayLayer.current=L.imageOverlay(displayOverlay.dataUrl,displayOverlay.bounds,{opacity:0.55,interactive:false}).addTo(map);
-
         if(showDragHandles){
           const[[s,w],[n,e]]=displayOverlay.bounds;
           Object.entries({sw:[s,w],ne:[n,e]}).forEach(([key,pos])=>{
@@ -400,16 +429,13 @@ function Hunt({pass,onLogout}){
         const sc=STATUSES.find(s=>s.key===l.status)?.color||"#333";
         const rad=listingRadius(l);
         const notesHtml=l.notes?`<div style="color:#555;font-size:12px;margin-top:4px;max-width:220px">${l.notes.replace(/\n/g,"<br>")}</div>`:"";
-        const extraPairs=[
-          ["Beds",l.beds],["Baths",l.baths],["Sqft",l.sqft],
-          ["Pets",l.pets],["Parking",l.parking],["Laundry",l.laundry],
-          ["Furnished",l.furnished],["AC",l.ac],["Floor not carpet",l.floor_not_carpet],
-          ["Gym",l.gym],["Housemates",l.housemates],
-          ["Simon★",l.simonRating?("★".repeat(Number(l.simonRating))):null],
-          ["Katy★",l.katyRating?("★".repeat(Number(l.katyRating))):null],
-        ].filter(([,v])=>v);
-        const extraHtml=extraPairs.map(([k,v])=>{
-          const colored=YN_FIELDS.includes(k.toLowerCase())?ynHtml(v):v;
+        // Build extra detail pairs from ALL_COL_DEFS — adding a new yn/text/stars column
+        // automatically makes it appear here.
+        const extraPairs=ALL_COL_DEFS
+          .filter(c=>c.field&&l[c.field]&&(c.type==="yn"||c.type==="text"||c.type==="stars"))
+          .map(c=>[c.header,c.type==="stars"?"★".repeat(Number(l[c.field])):l[c.field],c.type==="yn"]);
+        const extraHtml=extraPairs.map(([k,v,isYN])=>{
+          const colored=isYN?ynHtml(v):v;
           return`<span style="margin-right:8px;white-space:nowrap"><span style="color:#999;font-size:10px">${k} </span>${colored}</span>`;
         }).join("");
         const expandBtn=extraHtml?`<a href="#" onclick="window._toggleExtra('${l.id}');return false;" style="font-size:11px;color:#e07a5f;display:block;margin-top:5px">details ▾</a><div id="pop-x-${l.id}" style="display:none;margin-top:5px;line-height:2;font-size:12px">${extraHtml}</div>`:"";
@@ -455,7 +481,6 @@ function Hunt({pass,onLogout}){
   const f=n=>n==null?"—":n.toFixed(1);
   const YNCell=({val})=>val?<span style={ynStyle(val)}>{val}</span>:<span style={{color:"#bbb"}}>—</span>;
 
-  // Column reordering
   const reorderCols=(fromKey,toKey)=>{
     if(fromKey===toKey)return;
     const newOrder=[...colOrder];
@@ -466,33 +491,40 @@ function Hunt({pass,onLogout}){
     localStorage.setItem("col-order",JSON.stringify(newOrder));
   };
 
-  // Render a single table cell by column key
+  // renderCell switches on col.type, not col.key — adding a new column only requires
+  // an entry in ALL_COL_DEFS (with the right type), no changes here.
   function renderCell(l,key){
-    const sc=STATUSES.find(s=>s.key===l.status)?.color||"#333";
-    const inBike=l.bikeMi!=null&&l.bikeMi<=anchors.bike.radiusMi;
-    const inDrive=l.driveMi!=null&&l.driveMi<=anchors.drive.radiusMi;
-    switch(key){
-      case"status":    return<td key={key} style={S.td}><select value={l.status} onChange={e=>setStatus(l,e.target.value)} style={{...S.statusSel,color:sc,borderColor:sc}}>{STATUSES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></td>;
-      case"title":     return<td key={key} style={S.td}>{l.url?<a href={l.url} target="_blank" rel="noreferrer" style={S.link}>{l.title||"listing"}</a>:(l.title||"—")}</td>;
-      case"notes":     return<td key={key} style={{...S.td,minWidth:180}}><EditableCell value={l.notes}        onSave={v=>updateListing(l.id,{notes:v})}        placeholder="apt notes…"/></td>;
-      case"contactNotes":return<td key={key} style={{...S.td,minWidth:180}}><EditableCell value={l.contactNotes} onSave={v=>updateListing(l.id,{contactNotes:v})} placeholder="contact notes…"/></td>;
-      case"price":     return<td key={key} style={S.td}>{l.price?"$"+l.price:"—"}</td>;
-      case"bdba":      return<td key={key} style={S.td}>{(l.beds||"?")+"/"+(l.baths||"?")}</td>;
-      case"bikeMi":    return<td key={key} style={{...S.td,color:inBike?"#2a9d8f":"#bc4749",fontWeight:600}}>{f(l.bikeMi)}{!l.addressCertain&&l.bikeMi!=null&&<span style={{color:"#aaa",fontWeight:400}}> ~</span>}</td>;
-      case"driveMi":   return<td key={key} style={{...S.td,color:inDrive?"#2a9d8f":"#bc4749",fontWeight:600}}>{f(l.driveMi)}{!l.addressCertain&&l.driveMi!=null&&<span style={{color:"#aaa",fontWeight:400}}> ~</span>}</td>;
-      case"pets":      return<td key={key} style={S.td}><YNCell val={l.pets}/></td>;
-      case"parking":   return<td key={key} style={S.td}><YNCell val={l.parking}/></td>;
-      case"laundry":   return<td key={key} style={S.td}><YNCell val={l.laundry}/></td>;
-      case"furnished": return<td key={key} style={S.td}><YNCell val={l.furnished}/></td>;
-      case"ac":        return<td key={key} style={S.td}><YNCell val={l.ac}/></td>;
-      case"floor":     return<td key={key} style={S.td}><YNCell val={l.floor_not_carpet}/></td>;
-      case"gym":       return<td key={key} style={S.td}><YNCell val={l.gym}/></td>;
-      case"housemates":return<td key={key} style={S.td}><YNCell val={l.housemates}/></td>;
-      case"simonRating":return<td key={key} style={S.td}>{l.simonRating?"★".repeat(Number(l.simonRating)):"—"}</td>;
-      case"katyRating":return<td key={key} style={S.td}>{l.katyRating?"★".repeat(Number(l.katyRating)):"—"}</td>;
-      case"sqft":      return<td key={key} style={S.td}>{l.sqft||"—"}</td>;
-      case"actions":   return<td key={key} style={S.td}><button style={S.iconBtn} onClick={()=>editListing(l)}>edit</button><button style={{...S.iconBtn,color:"#bc4749"}} onClick={()=>setConfirmDelete(l.id)}>del</button></td>;
-      default:         return<td key={key} style={S.td}>—</td>;
+    const col=ALL_COL_DEFS.find(c=>c.key===key);
+    if(!col)return<td key={key} style={S.td}>—</td>;
+    const td=(content,extra={})=><td key={key} style={{...S.td,...extra}}>{content}</td>;
+    switch(col.type){
+      case"status":{
+        const sc=STATUSES.find(s=>s.key===l.status)?.color||"#333";
+        return td(<select value={l.status} onChange={e=>setStatus(l,e.target.value)} style={{...S.statusSel,color:sc,borderColor:sc}}>{STATUSES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select>);
+      }
+      case"title":
+        return td(l.url?<a href={l.url} target="_blank" rel="noreferrer" style={S.link}>{l.title||"listing"}</a>:(l.title||"—"));
+      case"editable":
+        return td(<EditableCell value={l[col.field]} onSave={v=>updateListing(l.id,{[col.field]:v})} placeholder={col.formPlaceholder}/>,{minWidth:180});
+      case"price":
+        return td(l[col.field]?"$"+l[col.field]:"—");
+      case"bdba":
+        return td((l.beds||"?")+"/"+(l.baths||"?"));
+      case"distance":{
+        const val=l[key];
+        const inRange=val!=null&&val<=anchors[col.anchor].radiusMi;
+        return td(<>{f(val)}{!l.addressCertain&&val!=null&&<span style={{color:"#aaa",fontWeight:400}}> ~</span>}</>,{color:inRange?"#2a9d8f":"#bc4749",fontWeight:600});
+      }
+      case"yn":
+        return td(<YNCell val={l[col.field]}/>);
+      case"stars":
+        return td(l[col.field]?"★".repeat(Number(l[col.field])):"—");
+      case"text":
+        return td(l[col.field]||"—");
+      case"actions":
+        return td(<><button style={S.iconBtn} onClick={()=>editListing(l)}>edit</button><button style={{...S.iconBtn,color:"#bc4749"}} onClick={()=>setConfirmDelete(l.id)}>del</button></>);
+      default:
+        return td("—");
     }
   }
 
@@ -534,38 +566,38 @@ function Hunt({pass,onLogout}){
       <section style={S.card}>
         <div style={S.formTitle}>{editingId?"Edit listing":"Review & add"}</div>
         <div style={S.formGrid}>
-          <input style={S_in} placeholder="Link"            value={d.url}    onChange={e=>sd("url",e.target.value)}/>
-          <input style={S_in} placeholder="Title/nickname" value={d.title}  onChange={e=>sd("title",e.target.value)}/>
-          <input style={{...S_in,gridColumn:"span 2"}} placeholder="Address" value={d.address} onChange={e=>setDraft({...d,address:e.target.value,lat:null,lng:null})}/>
+          {/* Fixed fields: link, title, address */}
+          <input style={S_in} placeholder="Link"            value={d.url}     onChange={e=>sd("url",e.target.value)}/>
+          <input style={S_in} placeholder="Title/nickname"  value={d.title}   onChange={e=>sd("title",e.target.value)}/>
+          <input style={{...S_in,gridColumn:"span 2"}} placeholder="Address"  value={d.address} onChange={e=>setDraft({...d,address:e.target.value,lat:null,lng:null})}/>
           <label style={S.checkLabel}>
             <input type="checkbox" checked={!!d.addressCertain} onChange={e=>sd("addressCertain",e.target.checked)}/>
             Address is exact (not approximate)
           </label>
           <div/><div/>
-          <input style={S_in} placeholder="Price $"    value={d.price}     onChange={e=>sd("price",e.target.value)}/>
-          <input style={S_in} placeholder="Beds"       value={d.beds}      onChange={e=>sd("beds",e.target.value)}/>
-          <input style={S_in} placeholder="Baths"      value={d.baths}     onChange={e=>sd("baths",e.target.value)}/>
-          <input style={S_in} placeholder="Sqft"       value={d.sqft}      onChange={e=>sd("sqft",e.target.value)}/>
-          <input style={S_in} placeholder="Pets"       value={d.pets}      onChange={e=>sd("pets",e.target.value)}/>
-          <input style={S_in} placeholder="Parking"    value={d.parking}   onChange={e=>sd("parking",e.target.value)}/>
-          <input style={S_in} placeholder="Laundry"    value={d.laundry}   onChange={e=>sd("laundry",e.target.value)}/>
-          <input style={S_in} placeholder="Furnished"  value={d.furnished} onChange={e=>sd("furnished",e.target.value)}/>
-          <input style={S_in} placeholder="AC"         value={d.ac}        onChange={e=>sd("ac",e.target.value)}/>
-          <input style={S_in} placeholder="Floor not carpet"  value={d.floor_not_carpet} onChange={e=>sd("floor_not_carpet",e.target.value)}/>
-          <input style={S_in} placeholder="Gym"        value={d.gym}       onChange={e=>sd("gym",e.target.value)}/>
-          <input style={S_in} placeholder="Housemates" value={d.housemates}onChange={e=>sd("housemates",e.target.value)}/>
-          <StarSelect label="Simon's rating" value={d.simonRating} onChange={v=>sd("simonRating",v)}/>
-          <StarSelect label="Katy's rating"  value={d.katyRating}  onChange={v=>sd("katyRating",v)}/>
-          <select style={{...S_in}} value={d.status} onChange={e=>sd("status",e.target.value)} disabled={!!d.poiType}>
+          {/* Auto-generated text/yn inputs from ALL_COL_DEFS */}
+          {ALL_COL_DEFS.filter(c=>c.formPlaceholder&&c.type!=="editable"&&c.type!=="stars").map(col=>(
+            <input key={col.key} style={S_in} placeholder={col.formPlaceholder}
+              value={d[col.field]||""} onChange={e=>sd(col.field,e.target.value)}/>
+          ))}
+          {/* Auto-generated star selects from ALL_COL_DEFS */}
+          {ALL_COL_DEFS.filter(c=>c.formLabel).map(col=>(
+            <StarSelect key={col.key} label={col.formLabel} value={d[col.field]} onChange={v=>sd(col.field,v)}/>
+          ))}
+          {/* Status and POI type */}
+          <select style={S_in} value={d.status} onChange={e=>sd("status",e.target.value)} disabled={!!d.poiType}>
             {STATUSES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
-          <select style={{...S_in}} value={d.poiType||""} onChange={e=>sd("poiType",e.target.value)}>
+          <select style={S_in} value={d.poiType||""} onChange={e=>sd("poiType",e.target.value)}>
             <option value="">— Not a POI —</option>
             {POI_TYPES.map(t=><option key={t.key} value={t.key}>{t.emoji} {t.label}</option>)}
           </select>
-          <div style={{gridColumn:"span 3"}}/>
-          <textarea style={{...S_in,gridColumn:"span 4",minHeight:50,resize:"vertical"}} placeholder="Notes (apartment)" value={d.notes} onChange={e=>sd("notes",e.target.value)}/>
-          <textarea style={{...S_in,gridColumn:"span 4",minHeight:50,resize:"vertical"}} placeholder="Contact notes (emails, calls, follow-ups)" value={d.contactNotes||""} onChange={e=>sd("contactNotes",e.target.value)}/>
+          {/* Auto-generated textareas from ALL_COL_DEFS (editable type) */}
+          {ALL_COL_DEFS.filter(c=>c.type==="editable").map(col=>(
+            <textarea key={col.key} style={{...S_in,gridColumn:"span 4",minHeight:50,resize:"vertical"}}
+              placeholder={col.formPlaceholder} value={d[col.field]||""}
+              onChange={e=>sd(col.field,e.target.value)}/>
+          ))}
         </div>
         <div style={S.formActions}>
           <button style={S.primary} onClick={submitDraft} disabled={geoBusy}>{geoBusy?"Geocoding…":editingId?"Save changes":"Add listing"}</button>
@@ -587,8 +619,11 @@ function Hunt({pass,onLogout}){
         {view==="table"&&(
           <div style={S.filterRow}>
             <span style={S.ctrlLabel}>Sort:</span>
-            {[["price","Price"],["bikeMi","→Simon"],["driveMi","→Google"],["katyRating","Katy★"],["simonRating","Simon★"],["beds","Beds"],["sqft","Sqft"]].map(([k,lbl])=>
-              <button key={k} style={chip(sortKey===k)} onClick={()=>setSortKey(k)}>{lbl}</button>)}
+            {ALL_COL_DEFS.filter(c=>c.sortK).map(c=>(
+              <button key={c.sortK} style={chip(sortKey===c.sortK)} onClick={()=>setSortKey(c.sortK)}>
+                {c.sortLabel||c.header}
+              </button>
+            ))}
             <span style={{fontSize:11,color:"#aaa",fontStyle:"italic",marginLeft:4}}>or click any column header · drag headers to reorder</span>
           </div>
         )}
@@ -652,16 +687,13 @@ function Hunt({pass,onLogout}){
           <div ref={mapRef} style={S.map}/>
           <div style={S.overlayBar}>
             {overlayErr&&<span style={{color:"#bc4749",fontSize:13}}>{overlayErr}</span>}
-            {/* State 1: no overlay at all */}
             {!pendingOverlay&&!overlay&&(
               <label style={S.uploadBtn}>Upload isochrone image<input type="file" accept="image/*" onChange={handleImageUpload} style={{display:"none"}}/></label>
             )}
-            {/* State 2: image uploaded, not yet frozen */}
             {pendingOverlay&&(<>
               <button style={S.primary} onClick={()=>{saveOverlay(pendingOverlay);setPendingOverlay(null);}}>Freeze image (make permanent)</button>
               <span style={S.hint}>Drag the SW &amp; NE corner pins to align, then freeze.</span>
             </>)}
-            {/* State 3/4: frozen overlay exists */}
             {!pendingOverlay&&overlay&&(<>
               <label style={S.uploadBtn}>Replace image<input type="file" accept="image/*" onChange={handleImageUpload} style={{display:"none"}}/></label>
               <button style={S.ghost} onClick={()=>{saveOverlay(null);setOverlayHidden(false);}}>Remove image</button>
