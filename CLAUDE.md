@@ -7,14 +7,24 @@ A single-file React apartment-hunting tracker for Katy and Simon. Everything liv
 
 ## Git workflow
 
-**Always push to both `main` and `release` together:**
+**Push to `main` for all normal commits:**
 ```bash
-git push origin HEAD:main HEAD:release
+git push origin HEAD:main
 ```
 
-The `release` branch exists solely to keep Netlify PR #3 open, which gives a stable preview URL at `https://deploy-preview-3--dreamy-hamster-18b730.netlify.app/`. As long as PR #3 is open, Netlify redeploys that URL on every push to `release`. Never merge or close PR #3.
+**Push to `release` separately to trigger a deploy:**
+```bash
+git push origin HEAD:release
+```
 
-**WARNING:** Never force-push `release` to match `main` exactly — GitHub will auto-close the PR when the diff becomes empty. If you need to sync a diverged `release`, force-push is fine as long as `release` ends up with different commits than `main`'s base branch. If the PR accidentally gets closed, reopen it on GitHub.
+The `release` branch exists solely to keep PR #3 open, which gives a stable preview URL at `https://deploy-preview-3--dreamy-hamster-18b730.netlify.app/`. Never merge or close PR #3.
+
+**WARNING:** Do NOT push to both branches simultaneously (`HEAD:main HEAD:release`). If `release` ever equals `main` exactly, GitHub auto-closes the PR. `release` must always stay one commit ahead of `main`. To update the preview after pushing to `main`, make an empty commit and push only to `release`:
+```bash
+git commit --allow-empty -m "Sync release branch"
+git push origin HEAD:release
+```
+If the PR accidentally gets closed, use the above to create a diff, then reopen it on GitHub.
 
 The session-start hook (`.claude/hooks/session-start.sh`) sets git config automatically:
 ```
