@@ -116,12 +116,34 @@
     .sale-popup { font-size: 13px; min-width: 260px; max-width: 320px; }
 
     .popup-address { font-weight: 700; font-size: 15px; margin-bottom: 3px; }
-    .popup-hours { color: #374151; margin-bottom: 6px; font-size: 12px; }
 
     .popup-cats { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
     .popup-cat { padding: 2px 8px; background: #e0f2fe; color: #0c4a6e; border-radius: 10px; font-size: 11px; }
 
-    /* Notes — yellow-tinted to stand out above ad text */
+    /* Hours section — blue-tinted */
+    .popup-hours-section {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 8px;
+    }
+    .popup-section-label { font-size: 11px; font-weight: 700; margin-bottom: 5px; }
+    .popup-hours-section .popup-section-label { color: #1e40af; }
+    .popup-time-row { display: flex; align-items: center; gap: 6px; }
+    .time-input {
+      border: 1px solid #93c5fd; border-radius: 4px;
+      padding: 3px 5px; font-size: 12px; font-family: inherit;
+      background: white; flex: 1; min-width: 0;
+    }
+    .time-input:focus { outline: 2px solid #3b82f6; border-color: transparent; }
+    .btn-clear-hours {
+      background: none; border: none; cursor: pointer;
+      color: #6b7280; font-size: 14px; padding: 2px 4px; line-height: 1;
+    }
+    .btn-clear-hours:hover { color: #ef4444; }
+
+    /* Notes section — yellow-tinted */
     .popup-notes-section {
       background: #fefce8;
       border: 1px solid #fde68a;
@@ -129,7 +151,7 @@
       padding: 8px;
       margin-bottom: 8px;
     }
-    .popup-notes-label { font-size: 11px; color: #92400e; font-weight: 700; margin-bottom: 4px; }
+    .popup-notes-section .popup-section-label { color: #92400e; }
     .popup-notes {
       width: 100%; min-height: 44px;
       border: 1px solid #fcd34d; border-radius: 4px;
@@ -182,6 +204,17 @@
         <button class="btn btn-neutral" style="margin-left:auto;font-size:11px" onclick="clearAllStars()">Clear stars</button>
       </div>
 
+      <div class="section-label">Open at time</div>
+      <div class="ctrl-row" style="flex-wrap:wrap;gap:6px">
+        <input type="time" id="time-filter" onchange="onTimeFilterChange()"
+               style="border:1px solid #cbd5e1;border-radius:4px;padding:3px 6px;font-size:12px;font-family:inherit">
+        <button class="btn btn-neutral" style="font-size:11px;padding:4px 7px" onclick="clearTimeFilter()">✕ Clear</button>
+        <label style="font-size:11px;width:100%">
+          <input type="checkbox" id="show-no-hours" checked onchange="onTimeFilterChange()">
+          Show if hours unknown
+        </label>
+      </div>
+
       <div class="section-label">Filter by category</div>
       <div id="cat-filters"></div>
 
@@ -229,8 +262,8 @@
   // ============================================================
   // CONFIG — edit here to change behavior globally
   // ============================================================
-  const DATA_URL  = "garage_sales/sales_data.json";
-  const STATE_KEY = "gs_ph_2025";
+  const DATA_URL   = "garage_sales/sales_data.json";
+  const STATE_KEY  = "gs_ph_2025";
   const MAP_CENTER = [37.948, -122.060]; // Pleasant Hill center
   const MAP_ZOOM   = 13;
 
@@ -247,9 +280,10 @@
   const UNTIMED_BORDER = "2px solid rgba(255,255,255,0.85)";
 
   // ============================================================
-  // STATE — persisted to localStorage
+  // STATE — persisted to localStorage + Firebase
+  // Shape: { [saleId]: { stars: 0–3, removed: bool, notes: string,
+  //                      hoursOverride: {start, end, raw} | null } }
   // ============================================================
-  // Shape: { [saleId]: { stars: 0–3, removed: bool, notes: string } }
   let state = {};
 
   function loadState() {
@@ -262,7 +296,7 @@
   }
 
   function getSaleState(id) {
-    return state[id] || { stars: 0, removed: false, notes: "" };
+    return state[id] || { stars: 0, removed: false, notes: "", hoursOverride: null };
   }
 
   function updateSaleState(id, patch) {
@@ -277,6 +311,7 @@
   // FIREBASE SYNC
   // ============================================================
   let notesSaveTimer = null;
+  let hoursSaveTimer = null;
 
   function fbSave(id) {
     if (window.GS_FB) GS_FB.save(id, getSaleState(id));
@@ -285,7 +320,7 @@
   function initFirebase() {
     GS_FB.subscribe(entries => {
       for (const [id, data] of Object.entries(entries)) state[id] = data;
-      saveState(); // keep localStorage as a cache
+      saveState();
       for (const id of Object.keys(markers)) refreshMarker(id);
       if (activeSaleId) refreshPopup(activeSaleId);
     });
@@ -295,16 +330,48 @@
   if (window.GS_FB) initFirebase();
 
   // ============================================================
+  // HOURS HELPERS
+  // ============================================================
+
+  // Returns the hours to use for a sale: user override takes precedence.
+  function effectiveHours(id) {
+    const s = getSaleState(id);
+    if (s.hoursOverride && (s.hoursOverride.start || s.hoursOverride.end)) return s.hoursOverride;
+    return salesById[id]?.hours || null;
+  }
+
+  // "14:30" → "2:30pm"
+  function fmt24(t) {
+    if (!t) return "";
+    const [h, m] = t.split(":").map(Number);
+    const ampm = h >= 12 ? "pm" : "am";
+    const h12  = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return m === 0 ? `${h12}${ampm}` : `${h12}:${String(m).padStart(2, "0")}${ampm}`;
+  }
+
+  // Build a human-readable raw string from 24h start/end
+  function makeRaw(start, end) {
+    return [fmt24(start), fmt24(end)].filter(Boolean).join("–");
+  }
+
+  // ============================================================
   // FILTERING
   // ============================================================
-  let showRemoved    = false;
-  const activeCats   = new Set(); // empty = show all categories
+  let showRemoved  = false;
+  let timeFilter   = "";    // "HH:MM" or ""
+  let showNoHours  = true;  // when time filter active, include sales with no hours?
+  const activeCats = new Set();
 
   function passesFilter(sale) {
     const s = getSaleState(sale.id);
     if (s.removed && !showRemoved) return false;
-    if (activeCats.size === 0) return true;
-    return (sale.categories || []).some(c => activeCats.has(c));
+    if (activeCats.size > 0 && !(sale.categories || []).some(c => activeCats.has(c))) return false;
+    if (timeFilter) {
+      const h = effectiveHours(sale.id);
+      if (!h || !h.start || !h.end) return showNoHours;
+      return h.start <= timeFilter && timeFilter <= h.end;
+    }
+    return true;
   }
 
   function applyFilters() {
@@ -322,6 +389,18 @@
     applyFilters();
   }
 
+  function onTimeFilterChange() {
+    timeFilter  = document.getElementById("time-filter").value;
+    showNoHours = document.getElementById("show-no-hours").checked;
+    applyFilters();
+  }
+
+  function clearTimeFilter() {
+    document.getElementById("time-filter").value = "";
+    timeFilter = "";
+    applyFilters();
+  }
+
   function toggleCategory(cat) {
     if (activeCats.has(cat)) activeCats.delete(cat);
     else activeCats.add(cat);
@@ -334,30 +413,28 @@
   // ============================================================
   // MARKER RENDERING
   // ============================================================
-  const markers    = {};  // saleId → L.marker
-  const salesById  = {};  // saleId → sale object
+  const markers   = {};  // saleId → L.marker
+  const salesById = {};  // saleId → sale object
 
   function pinStyle(id) {
     const s = getSaleState(id);
     if (s.removed) return REMOVED_PIN;
     const starLevel = STAR_LEVELS.find(l => l.stars === s.stars);
     if (starLevel) return starLevel;
-    // Unrated: smaller dot for listings that have no description text
     const sale = salesById[id];
     return (sale && !sale.text) ? DEFAULT_PIN_SLIM : DEFAULT_PIN;
   }
 
   function makeIcon(id) {
     const { color, size } = pinStyle(id);
-    const s    = getSaleState(id);
-    const sale = salesById[id];
+    const s      = getSaleState(id);
     const label  = (!s.removed && s.stars > 0) ? "★".repeat(s.stars) : "";
-    const border = (sale && sale.hours) ? TIMED_BORDER : UNTIMED_BORDER;
+    const border = effectiveHours(id) ? TIMED_BORDER : UNTIMED_BORDER;
     return L.divIcon({
       html: `<div class="pin" style="width:${size}px;height:${size}px;background:${color};border:${border}">${label}</div>`,
-      className:   "",
-      iconSize:    [size, size],
-      iconAnchor:  [size / 2, size / 2],
+      className:  "",
+      iconSize:   [size, size],
+      iconAnchor: [size / 2, size / 2],
     });
   }
 
@@ -375,8 +452,12 @@
   let activeSaleId = null;
 
   function makePopupContent(sale) {
-    const s = getSaleState(sale.id);
-    const hoursRaw = sale.hours ? sale.hours.raw : "";
+    const s  = getSaleState(sale.id);
+    const eh = effectiveHours(sale.id);
+    const hasOverride = !!s.hoursOverride && (s.hoursOverride.start || s.hoursOverride.end);
+
+    const startVal = eh ? (eh.start || "") : "";
+    const endVal   = eh ? (eh.end   || "") : "";
 
     const catBadges = (sale.categories || [])
       .map(c => `<span class="popup-cat">${esc(c)}</span>`)
@@ -396,11 +477,24 @@
     return `
       <div class="sale-popup">
         <div class="popup-address">${esc(sale.address)}</div>
-        ${hoursRaw ? `<div class="popup-hours">🕐 ${esc(hoursRaw)}</div>` : ""}
         <div class="popup-cats">${catBadges}</div>
 
+        <div class="popup-hours-section">
+          <div class="popup-section-label">🕐 Hours${hasOverride ? " (edited)" : ""}</div>
+          <div class="popup-time-row">
+            <input type="time" class="time-input" value="${esc(startVal)}"
+                   oninput="window.setSaleHours('${sale.id}', 'start', this.value)">
+            <span style="color:#6b7280;flex-shrink:0">–</span>
+            <input type="time" class="time-input" value="${esc(endVal)}"
+                   oninput="window.setSaleHours('${sale.id}', 'end', this.value)">
+            ${hasOverride
+              ? `<button class="btn-clear-hours" title="Clear edit" onclick="window.clearSaleHours('${sale.id}')">↩</button>`
+              : ""}
+          </div>
+        </div>
+
         <div class="popup-notes-section">
-          <div class="popup-notes-label">My notes</div>
+          <div class="popup-section-label">My notes</div>
           <textarea class="popup-notes"
             oninput="window.setSaleNotes('${sale.id}', this.value)"
             placeholder="Add notes…">${esc(s.notes || "")}</textarea>
@@ -429,14 +523,29 @@
   window.setSaleStars   = (id, n)   => updateSaleState(id, { stars: n });
   window.setSaleRemoved = (id, val) => updateSaleState(id, { removed: val });
 
-  // Notes: save state instantly but skip popup re-render (re-rendering would
-  // replace the textarea DOM and cause it to lose focus on every keystroke).
-  // Firebase write is debounced so we don't send a request per keystroke.
+  // Notes and hours: save state + debounced Firebase write, but NO popup
+  // re-render — re-rendering replaces the DOM element and kills focus.
   window.setSaleNotes = (id, v) => {
     state[id] = { ...getSaleState(id), notes: v };
     saveState();
     clearTimeout(notesSaveTimer);
     notesSaveTimer = setTimeout(() => fbSave(id), 800);
+  };
+
+  window.setSaleHours = (id, field, v) => {
+    const cur     = getSaleState(id).hoursOverride || { start: "", end: "" };
+    const updated = { ...cur, [field]: v };
+    updated.raw   = makeRaw(updated.start, updated.end);
+    state[id] = { ...getSaleState(id), hoursOverride: updated };
+    saveState();
+    clearTimeout(hoursSaveTimer);
+    hoursSaveTimer = setTimeout(() => fbSave(id), 800);
+    refreshMarker(id); // update border color immediately
+    applyFilters();    // re-evaluate time filter immediately
+  };
+
+  window.clearSaleHours = (id) => {
+    updateSaleState(id, { hoursOverride: null });
   };
 
   // ============================================================
@@ -450,6 +559,8 @@
   };
 
   window.onShowRemovedChange = onShowRemovedChange;
+  window.onTimeFilterChange  = onTimeFilterChange;
+  window.clearTimeFilter     = clearTimeFilter;
   window.toggleCategory      = toggleCategory;
 
   window.clearAllStars = function() {
@@ -498,10 +609,10 @@
     const catContainer = document.getElementById("cat-filters");
     [...allCats].sort().forEach(cat => {
       const chip = document.createElement("button");
-      chip.className    = "cat-chip";
-      chip.dataset.cat  = cat;
-      chip.textContent  = cat;
-      chip.onclick      = () => toggleCategory(cat);
+      chip.className   = "cat-chip";
+      chip.dataset.cat = cat;
+      chip.textContent = cat;
+      chip.onclick     = () => toggleCategory(cat);
       catContainer.appendChild(chip);
     });
 
