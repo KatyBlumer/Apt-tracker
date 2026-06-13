@@ -190,6 +190,38 @@
     </div>
   </div>
 
+  <!-- Firebase: initializes window.GS_FB and fires "gs-fb-ready" -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, onSnapshot }
+      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const db = getFirestore(initializeApp({
+      apiKey:            "AIzaSyBQE_jALldqxkmkk01oLwyfiDAlj5HnMS0",
+      authDomain:        "apartment-hunt-2026.firebaseapp.com",
+      projectId:         "apartment-hunt-2026",
+      storageBucket:     "apartment-hunt-2026.firebasestorage.app",
+      messagingSenderId: "636926285570",
+      appId:             "1:636926285570:web:07bb863c19a7f8a4c5541b",
+    }));
+
+    const COLL = collection(db, "garage_sale_ph", "2025", "entries");
+
+    window.GS_FB = {
+      subscribe(cb) {
+        return onSnapshot(COLL, snap => {
+          const entries = {};
+          snap.forEach(d => { entries[d.id] = d.data(); });
+          cb(entries);
+        }, err => console.error("Firestore error:", err));
+      },
+      async save(id, data) {
+        await setDoc(doc(COLL, id), data);
+      },
+    };
+    window.dispatchEvent(new Event("gs-fb-ready"));
+  </script>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
   "use strict";
@@ -208,8 +240,9 @@
     { stars: 2, label: "Great",    color: "#f97316", size: 17 },
     { stars: 3, label: "Must-see", color: "#ef4444", size: 21 },
   ];
-  const DEFAULT_PIN = { color: "#3b82f6", size: 12 };
-  const REMOVED_PIN = { color: "#9ca3af", size: 8  };
+  const DEFAULT_PIN      = { color: "#3b82f6", size: 12 };
+  const DEFAULT_PIN_SLIM = { color: "#3b82f6", size: 7  }; // listings with no description text
+  const REMOVED_PIN      = { color: "#9ca3af", size: 8  };
 
   // ============================================================
   // STATE — persisted to localStorage
@@ -233,9 +266,31 @@
   function updateSaleState(id, patch) {
     state[id] = { ...getSaleState(id), ...patch };
     saveState();
+    fbSave(id);
     refreshMarker(id);
     refreshPopup(id);
   }
+
+  // ============================================================
+  // FIREBASE SYNC
+  // ============================================================
+  let notesSaveTimer = null;
+
+  function fbSave(id) {
+    if (window.GS_FB) GS_FB.save(id, getSaleState(id));
+  }
+
+  function initFirebase() {
+    GS_FB.subscribe(entries => {
+      for (const [id, data] of Object.entries(entries)) state[id] = data;
+      saveState(); // keep localStorage as a cache
+      for (const id of Object.keys(markers)) refreshMarker(id);
+      if (activeSaleId) refreshPopup(activeSaleId);
+    });
+  }
+
+  window.addEventListener("gs-fb-ready", initFirebase);
+  if (window.GS_FB) initFirebase();
 
   // ============================================================
   // FILTERING
@@ -283,7 +338,11 @@
   function pinStyle(id) {
     const s = getSaleState(id);
     if (s.removed) return REMOVED_PIN;
-    return STAR_LEVELS.find(l => l.stars === s.stars) || DEFAULT_PIN;
+    const starLevel = STAR_LEVELS.find(l => l.stars === s.stars);
+    if (starLevel) return starLevel;
+    // Unrated: smaller dot for listings that have no description text
+    const sale = salesById[id];
+    return (sale && !sale.text) ? DEFAULT_PIN_SLIM : DEFAULT_PIN;
   }
 
   function makeIcon(id) {
@@ -365,7 +424,16 @@
   // ============================================================
   window.setSaleStars   = (id, n)   => updateSaleState(id, { stars: n });
   window.setSaleRemoved = (id, val) => updateSaleState(id, { removed: val });
-  window.setSaleNotes   = (id, v)   => updateSaleState(id, { notes: v });
+
+  // Notes: save state instantly but skip popup re-render (re-rendering would
+  // replace the textarea DOM and cause it to lose focus on every keystroke).
+  // Firebase write is debounced so we don't send a request per keystroke.
+  window.setSaleNotes = (id, v) => {
+    state[id] = { ...getSaleState(id), notes: v };
+    saveState();
+    clearTimeout(notesSaveTimer);
+    notesSaveTimer = setTimeout(() => fbSave(id), 800);
+  };
 
   // ============================================================
   // CONTROLS UI HANDLERS
@@ -436,14 +504,18 @@
     // Build legend from STAR_LEVELS config + defaults
     const legendRows = [
       ...STAR_LEVELS.map(l => ({ color: l.color, text: `${"★".repeat(l.stars)} ${l.label}` })),
-      { color: DEFAULT_PIN.color, text: "Not yet rated" },
-      { color: REMOVED_PIN.color, text: "Removed" },
+      { color: DEFAULT_PIN.color,      text: "Not yet rated" },
+      { color: DEFAULT_PIN_SLIM.color, text: "Not yet rated (no description)", slim: true },
+      { color: REMOVED_PIN.color,      text: "Removed" },
     ];
     document.getElementById("legend").innerHTML = legendRows
-      .map(r => `<div class="legend-row">
-                   <div class="legend-dot" style="background:${r.color}"></div>
-                   <span>${esc(r.text)}</span>
-                 </div>`)
+      .map(r => {
+        const dotSize = r.slim ? "7px" : "12px";
+        return `<div class="legend-row">
+                  <div class="legend-dot" style="background:${r.color};width:${dotSize};height:${dotSize}"></div>
+                  <span>${esc(r.text)}</span>
+                </div>`;
+      })
       .join("");
 
     // Create markers for every geocoded sale
