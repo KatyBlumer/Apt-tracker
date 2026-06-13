@@ -12,7 +12,9 @@ A single-file React apartment-hunting tracker for Katy and Simon. Everything liv
 git push origin HEAD:main HEAD:release
 ```
 
-The `release` branch exists solely to keep Netlify PR #2 open, which gives a stable preview URL at `https://deploy-preview-2--dreamy-hamster-18b730.netlify.app/`. As long as PR #2 is open, Netlify redeploys that URL on every push to `release`. Never merge or close PR #2.
+The `release` branch exists solely to keep Netlify PR #3 open, which gives a stable preview URL at `https://deploy-preview-3--dreamy-hamster-18b730.netlify.app/`. As long as PR #3 is open, Netlify redeploys that URL on every push to `release`. Never merge or close PR #3.
+
+**WARNING:** Never force-push `release` to match `main` exactly — GitHub will auto-close the PR when the diff becomes empty. If you need to sync a diverged `release`, force-push is fine as long as `release` ends up with different commits than `main`'s base branch. If the PR accidentally gets closed, reopen it on GitHub.
 
 The session-start hook (`.claude/hooks/session-start.sh`) sets git config automatically:
 ```
