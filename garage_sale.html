@@ -243,6 +243,8 @@
   const DEFAULT_PIN      = { color: "#3b82f6", size: 12 };
   const DEFAULT_PIN_SLIM = { color: "#3b82f6", size: 7  }; // listings with no description text
   const REMOVED_PIN      = { color: "#9ca3af", size: 8  };
+  const TIMED_BORDER   = "2px solid #1e293b"; // dark border = has hours info
+  const UNTIMED_BORDER = "2px solid rgba(255,255,255,0.85)";
 
   // ============================================================
   // STATE — persisted to localStorage
@@ -347,10 +349,12 @@
 
   function makeIcon(id) {
     const { color, size } = pinStyle(id);
-    const s = getSaleState(id);
-    const label = (!s.removed && s.stars > 0) ? "★".repeat(s.stars) : "";
+    const s    = getSaleState(id);
+    const sale = salesById[id];
+    const label  = (!s.removed && s.stars > 0) ? "★".repeat(s.stars) : "";
+    const border = (sale && sale.hours) ? TIMED_BORDER : UNTIMED_BORDER;
     return L.divIcon({
-      html: `<div class="pin" style="width:${size}px;height:${size}px;background:${color}">${label}</div>`,
+      html: `<div class="pin" style="width:${size}px;height:${size}px;background:${color};border:${border}">${label}</div>`,
       className:   "",
       iconSize:    [size, size],
       iconAnchor:  [size / 2, size / 2],
@@ -507,12 +511,14 @@
       { color: DEFAULT_PIN.color,      text: "Not yet rated" },
       { color: DEFAULT_PIN_SLIM.color, text: "Not yet rated (no description)", slim: true },
       { color: REMOVED_PIN.color,      text: "Removed" },
+      { color: DEFAULT_PIN.color,      text: "Dark border = has listed hours", border: TIMED_BORDER },
     ];
     document.getElementById("legend").innerHTML = legendRows
       .map(r => {
-        const dotSize = r.slim ? "7px" : "12px";
+        const size   = r.slim ? "7px" : "12px";
+        const border = r.border || UNTIMED_BORDER;
         return `<div class="legend-row">
-                  <div class="legend-dot" style="background:${r.color};width:${dotSize};height:${dotSize}"></div>
+                  <div class="legend-dot" style="background:${r.color};width:${size};height:${size};border:${border}"></div>
                   <span>${esc(r.text)}</span>
                 </div>`;
       })
