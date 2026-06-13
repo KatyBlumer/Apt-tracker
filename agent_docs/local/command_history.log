@@ -6,3 +6,22 @@
 ---
 2026-06-06 21:31:53 find /Users/katyblumer/repos/Apt-tracker/agent_docs -type f
 ---
+2026-06-06 22:15:57 git status && git diff
+---
+2026-06-06 22:16:07 git add index.html && git commit -m "$(cat <<'EOF'
+UI: gym field, deleted status, map edit link, black dots, freeze isochrone, reorderable columns
+
+- Add "gym" yes/no field (form, table, map popup, auto-parse prompt)
+- Add "deleted" status (gray #6b6b6b) alongside existing statuses
+- Map popups now have an "edit ✎" link that jumps to the edit form (via window._editListing)
+- Workplace dots on map changed from colored to black (#1a1a1a)
+- Isochrone image workflow: upload is now local-only; a "Freeze" button saves it to Firebase permanently; frozen overlay shows Replace / Hide / Remove buttons instead of immediate save
+- Table columns are now drag-to-reorder (order persisted in localStorage) and sortable by clicking headers; sortable headers highlight in accent color with ▲ indicator
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+EOF
+)"
+
+---
+2026-06-06 22:16:30 git push
+---
