@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PH Garage Sales 6/13–6/14</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    /* ============================================================
+       Layout
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; }
+    #map { position: absolute; inset: 0; }
+
+    /* ============================================================
+       Controls panel (floating top-left)
+    ============================================================ */
+    #controls {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 1000;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.22);
+      width: 280px;
+      max-height: calc(100vh - 24px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #controls-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #1e3a5f;
+      color: white;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #controls-header h2 { font-size: 14px; font-weight: 700; margin: 0; }
+    #controls-toggle { background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 0; }
+
+    #controls-body {
+      overflow-y: auto;
+      padding: 12px 14px;
+    }
+    #controls-body.hidden { display: none; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 8px 0 5px;
+    }
+
+    /* Category chips */
+    #cat-filters { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 2px; }
+
+    .cat-chip {
+      padding: 3px 9px;
+      border-radius: 12px;
+      border: 1.5px solid #cbd5e1;
+      background: white;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.15s;
+      user-select: none;
+      font-family: inherit;
+    }
+    .cat-chip.active { background: #1e3a5f; border-color: #1e3a5f; color: white; }
+    .cat-chip:hover:not(.active) { border-color: #64748b; }
+
+    /* Legend */
+    .legend { display: flex; flex-direction: column; gap: 4px; }
+    .legend-row { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+    .legend-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.7);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+
+    /* Misc controls */
+    .ctrl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .ctrl-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+    /* ============================================================
+       Pins
+    ============================================================ */
+    .pin {
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.85);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 7px;
+      color: rgba(255,255,255,0.95);
+      font-weight: 900;
+      cursor: pointer;
+      line-height: 1;
+      transition: transform 0.12s;
+    }
+    .pin:hover { transform: scale(1.25); }
+
+    /* ============================================================
+       Popup
+    ============================================================ */
+    .sale-popup { font-size: 13px; min-width: 260px; max-width: 320px; }
+
+    .popup-address { font-weight: 700; font-size: 15px; margin-bottom: 3px; }
+    .popup-hours { color: #374151; margin-bottom: 6px; font-size: 12px; }
+
+    .popup-cats { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .popup-cat { padding: 2px 8px; background: #e0f2fe; color: #0c4a6e; border-radius: 10px; font-size: 11px; }
+
+    /* Notes — yellow-tinted to stand out above ad text */
+    .popup-notes-section {
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 8px;
+    }
+    .popup-notes-label { font-size: 11px; color: #92400e; font-weight: 700; margin-bottom: 4px; }
+    .popup-notes {
+      width: 100%; min-height: 44px;
+      border: 1px solid #fcd34d; border-radius: 4px;
+      padding: 4px 6px; font-size: 12px;
+      resize: vertical; font-family: inherit; background: white;
+    }
+
+    .popup-divider { border: none; border-top: 1px solid #e5e7eb; margin: 8px 0; }
+
+    .popup-text {
+      color: #374151; font-size: 12px; line-height: 1.5;
+      max-height: 130px; overflow-y: auto;
+      white-space: pre-wrap; margin-bottom: 10px;
+    }
+
+    /* Action buttons */
+    .popup-actions { display: flex; gap: 5px; flex-wrap: wrap; }
+
+    .btn {
+      padding: 5px 9px; border-radius: 5px; border: 1.5px solid;
+      cursor: pointer; font-size: 12px; font-weight: 600;
+      font-family: inherit; transition: opacity 0.12s;
+    }
+    .btn:hover  { opacity: 0.82; }
+    .btn:active { transform: scale(0.96); }
+    .btn.current { box-shadow: 0 0 0 2px rgba(0,0,0,0.25); }
+
+    .btn-star1   { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+    .btn-star2   { background: #ffedd5; border-color: #f97316; color: #7c2d12; }
+    .btn-star3   { background: #fee2e2; border-color: #ef4444; color: #7f1d1d; }
+    .btn-neutral { background: #f3f4f6; border-color: #9ca3af; color: #374151; }
+    .btn-remove  { background: #f9fafb; border-color: #6b7280; color: #374151; }
+    .btn-restore { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="controls">
+    <div id="controls-header" onclick="toggleControls()">
+      <h2>🏷️ PH Garage Sales 6/13–6/14</h2>
+      <button id="controls-toggle" aria-label="Collapse">▲</button>
+    </div>
+    <div id="controls-body">
+      <div class="ctrl-row">
+        <label>
+          <input type="checkbox" id="show-removed" onchange="onShowRemovedChange()">
+          Show removed
+        </label>
+        <button class="btn btn-neutral" style="margin-left:auto;font-size:11px" onclick="clearAllStars()">Clear stars</button>
+      </div>
+
+      <div class="section-label">Filter by category</div>
+      <div id="cat-filters"></div>
+
+      <div class="section-label" style="margin-top:10px">Legend</div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+  "use strict";
+
+  // ============================================================
+  // CONFIG — edit here to change behavior globally
+  // ============================================================
+  const DATA_URL  = "garage_sales/sales_data.json";
+  const STATE_KEY = "gs_ph_2025";
+  const MAP_CENTER = [37.948, -122.060]; // Pleasant Hill center
+  const MAP_ZOOM   = 13;
+
+  // Star levels: single source of truth for colors, labels, sizes
+  const STAR_LEVELS = [
+    { stars: 1, label: "Good",     color: "#f59e0b", size: 14 },
+    { stars: 2, label: "Great",    color: "#f97316", size: 17 },
+    { stars: 3, label: "Must-see", color: "#ef4444", size: 21 },
+  ];
+  const DEFAULT_PIN = { color: "#3b82f6", size: 12 };
+  const REMOVED_PIN = { color: "#9ca3af", size: 8  };
+
+  // ============================================================
+  // STATE — persisted to localStorage
+  // ============================================================
+  // Shape: { [saleId]: { stars: 0–3, removed: bool, notes: string } }
+  let state = {};
+
+  function loadState() {
+    try { state = JSON.parse(localStorage.getItem(STATE_KEY) || "{}"); }
+    catch { state = {}; }
+  }
+
+  function saveState() {
+    localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  }
+
+  function getSaleState(id) {
+    return state[id] || { stars: 0, removed: false, notes: "" };
+  }
+
+  function updateSaleState(id, patch) {
+    state[id] = { ...getSaleState(id), ...patch };
+    saveState();
+    refreshMarker(id);
+    refreshPopup(id);
+  }
+
+  // ============================================================
+  // FILTERING
+  // ============================================================
+  let showRemoved    = false;
+  const activeCats   = new Set(); // empty = show all categories
+
+  function passesFilter(sale) {
+    const s = getSaleState(sale.id);
+    if (s.removed && !showRemoved) return false;
+    if (activeCats.size === 0) return true;
+    return (sale.categories || []).some(c => activeCats.has(c));
+  }
+
+  function applyFilters() {
+    for (const [id, marker] of Object.entries(markers)) {
+      const sale = salesById[id];
+      if (!sale) continue;
+      const visible = passesFilter(sale);
+      if (visible && !map.hasLayer(marker)) marker.addTo(map);
+      if (!visible && map.hasLayer(marker))  marker.remove();
+    }
+  }
+
+  function onShowRemovedChange() {
+    showRemoved = document.getElementById("show-removed").checked;
+    applyFilters();
+  }
+
+  function toggleCategory(cat) {
+    if (activeCats.has(cat)) activeCats.delete(cat);
+    else activeCats.add(cat);
+    document.querySelectorAll(".cat-chip").forEach(el => {
+      el.classList.toggle("active", activeCats.has(el.dataset.cat));
+    });
+    applyFilters();
+  }
+
+  // ============================================================
+  // MARKER RENDERING
+  // ============================================================
+  const markers    = {};  // saleId → L.marker
+  const salesById  = {};  // saleId → sale object
+
+  function pinStyle(id) {
+    const s = getSaleState(id);
+    if (s.removed) return REMOVED_PIN;
+    return STAR_LEVELS.find(l => l.stars === s.stars) || DEFAULT_PIN;
+  }
+
+  function makeIcon(id) {
+    const { color, size } = pinStyle(id);
+    const s = getSaleState(id);
+    const label = (!s.removed && s.stars > 0) ? "★".repeat(s.stars) : "";
+    return L.divIcon({
+      html: `<div class="pin" style="width:${size}px;height:${size}px;background:${color}">${label}</div>`,
+      className:   "",
+      iconSize:    [size, size],
+      iconAnchor:  [size / 2, size / 2],
+    });
+  }
+
+  function refreshMarker(id) {
+    const marker = markers[id];
+    if (marker) {
+      marker.setIcon(makeIcon(id));
+      applyFilters();
+    }
+  }
+
+  // ============================================================
+  // POPUP CONTENT
+  // ============================================================
+  let activeSaleId = null;
+
+  function makePopupContent(sale) {
+    const s = getSaleState(sale.id);
+    const hoursRaw = sale.hours ? sale.hours.raw : "";
+
+    const catBadges = (sale.categories || [])
+      .map(c => `<span class="popup-cat">${esc(c)}</span>`)
+      .join("");
+
+    const starBtns = STAR_LEVELS
+      .map(l => `<button class="btn btn-star${l.stars}${s.stars === l.stars ? " current" : ""}"
+                         onclick="window.setSaleStars('${sale.id}', ${s.stars === l.stars ? 0 : l.stars})">
+                   ${"★".repeat(l.stars)} ${esc(l.label)}
+                 </button>`)
+      .join("");
+
+    const actionBtn = s.removed
+      ? `<button class="btn btn-restore" onclick="window.setSaleRemoved('${sale.id}', false)">↩ Restore</button>`
+      : `<button class="btn btn-remove"  onclick="window.setSaleRemoved('${sale.id}', true)">✕ Remove</button>`;
+
+    return `
+      <div class="sale-popup">
+        <div class="popup-address">${esc(sale.address)}</div>
+        ${hoursRaw ? `<div class="popup-hours">🕐 ${esc(hoursRaw)}</div>` : ""}
+        <div class="popup-cats">${catBadges}</div>
+
+        <div class="popup-notes-section">
+          <div class="popup-notes-label">My notes</div>
+          <textarea class="popup-notes"
+            oninput="window.setSaleNotes('${sale.id}', this.value)"
+            placeholder="Add notes…">${esc(s.notes || "")}</textarea>
+        </div>
+
+        <hr class="popup-divider">
+        <div class="popup-text">${esc(sale.text || "")}</div>
+        <div class="popup-actions">
+          ${starBtns}
+          ${actionBtn}
+        </div>
+      </div>`;
+  }
+
+  function refreshPopup(id) {
+    const marker = markers[id];
+    const sale   = salesById[id];
+    if (marker && sale && marker.isPopupOpen()) {
+      marker.setPopupContent(makePopupContent(sale));
+    }
+  }
+
+  // ============================================================
+  // POPUP ACTION HANDLERS (attached to window so popup HTML can call them)
+  // ============================================================
+  window.setSaleStars   = (id, n)   => updateSaleState(id, { stars: n });
+  window.setSaleRemoved = (id, val) => updateSaleState(id, { removed: val });
+  window.setSaleNotes   = (id, v)   => updateSaleState(id, { notes: v });
+
+  // ============================================================
+  // CONTROLS UI HANDLERS
+  // ============================================================
+  window.toggleControls = function() {
+    const body = document.getElementById("controls-body");
+    const btn  = document.getElementById("controls-toggle");
+    body.classList.toggle("hidden");
+    btn.textContent = body.classList.contains("hidden") ? "▼" : "▲";
+  };
+
+  window.onShowRemovedChange = onShowRemovedChange;
+  window.toggleCategory      = toggleCategory;
+
+  window.clearAllStars = function() {
+    if (!confirm("Clear all star ratings?")) return;
+    for (const id of Object.keys(state)) {
+      if (state[id].stars) {
+        state[id] = { ...state[id], stars: 0 };
+        refreshMarker(id);
+      }
+    }
+    saveState();
+    if (activeSaleId) refreshPopup(activeSaleId);
+  };
+
+  // ============================================================
+  // UTILITY
+  // ============================================================
+  function esc(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  // ============================================================
+  // INIT
+  // ============================================================
+  let map;
+
+  async function init() {
+    loadState();
+
+    map = L.map("map").setView(MAP_CENTER, MAP_ZOOM);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+      maxZoom: 19,
+    }).addTo(map);
+
+    const sales = await fetch(DATA_URL).then(r => r.json());
+
+    for (const sale of sales) salesById[sale.id] = sale;
+
+    // Build category chips from all categories present in the data
+    const allCats = new Set();
+    for (const sale of sales) for (const c of (sale.categories || [])) allCats.add(c);
+
+    const catContainer = document.getElementById("cat-filters");
+    [...allCats].sort().forEach(cat => {
+      const chip = document.createElement("button");
+      chip.className    = "cat-chip";
+      chip.dataset.cat  = cat;
+      chip.textContent  = cat;
+      chip.onclick      = () => toggleCategory(cat);
+      catContainer.appendChild(chip);
+    });
+
+    // Build legend from STAR_LEVELS config + defaults
+    const legendRows = [
+      ...STAR_LEVELS.map(l => ({ color: l.color, text: `${"★".repeat(l.stars)} ${l.label}` })),
+      { color: DEFAULT_PIN.color, text: "Not yet rated" },
+      { color: REMOVED_PIN.color, text: "Removed" },
+    ];
+    document.getElementById("legend").innerHTML = legendRows
+      .map(r => `<div class="legend-row">
+                   <div class="legend-dot" style="background:${r.color}"></div>
+                   <span>${esc(r.text)}</span>
+                 </div>`)
+      .join("");
+
+    // Create markers for every geocoded sale
+    for (const sale of sales) {
+      if (!sale.lat || !sale.lng) continue;
+
+      const marker = L.marker([sale.lat, sale.lng], {
+        icon:  makeIcon(sale.id),
+        title: sale.address,
+      });
+
+      marker.bindPopup(() => makePopupContent(sale), {
+        maxWidth: 340,
+        minWidth: 260,
+      });
+
+      marker.on("popupopen",  () => { activeSaleId = sale.id; });
+      marker.on("popupclose", () => { if (activeSaleId === sale.id) activeSaleId = null; });
+
+      markers[sale.id] = marker;
+    }
+
+    applyFilters();
+  }
+
+  init().catch(err => {
+    document.body.innerHTML = `<p style="padding:20px;color:red">
+      Failed to load sale data: ${err.message}<br>
+      Make sure <code>garage_sales/sales_data.json</code> exists.
+    </p>`;
+  });
+  </script>
+</body>
+</html>
