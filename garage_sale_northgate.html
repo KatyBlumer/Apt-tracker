@@ -164,6 +164,7 @@
     .btn-neutral { background: #f3f4f6; border-color: #9ca3af; color: #374151; }
     .btn-remove  { background: #f9fafb; border-color: #6b7280; color: #374151; }
     .btn-restore { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+    .btn-visited { background: #dcfce7; border-color: #15803d; color: #14532d; }
   </style>
 </head>
 <body>
@@ -190,6 +191,13 @@
           Show removed
         </label>
         <button class="btn btn-neutral" style="margin-left:auto;font-size:11px" onclick="clearAllStars()">Clear stars</button>
+      </div>
+
+      <div class="ctrl-row">
+        <label>
+          <input type="checkbox" id="notes-only" onchange="onNotesOnlyChange()">
+          Only show ones with my notes
+        </label>
       </div>
 
       <div class="section-label">Legend</div>
@@ -267,9 +275,12 @@
     { stars: 2, label: "Great",    color: "#f97316", size: 17 },
     { stars: 3, label: "Must-see", color: "#ef4444", size: 21 },
   ];
-  const DEFAULT_PIN   = { color: "#3b82f6", size: 12 };
-  const REMOVED_PIN   = { color: "#9ca3af", size: 8  };
-  const INFO_PIN      = { color: "#059669", size: 16 };
+  const DEFAULT_PIN      = { color: "#3b82f6", size: 12 }; // unrated, has item description
+  const DEFAULT_PIN_SLIM = { color: "#3b82f6", size: 7  }; // unrated, no item description yet
+  const REMOVED_PIN      = { color: "#9ca3af", size: 8  };
+  const INFO_PIN         = { color: "#059669", size: 16 };
+  const VISITED_BORDER   = "2px solid #15803d"; // dark green = visited
+  const DEFAULT_BORDER   = "2px solid rgba(255,255,255,0.85)";
 
   // ============================================================
   // STATE — user ratings/notes, persisted to localStorage + Firebase
@@ -284,7 +295,7 @@
     localStorage.setItem(STATE_KEY, JSON.stringify(state));
   }
   function getSaleState(id) {
-    return state[id] || { stars: 0, removed: false, notes: "" };
+    return state[id] || { stars: 0, removed: false, visited: false, notes: "" };
   }
   function updateSaleState(id, patch) {
     state[id] = { ...getSaleState(id), ...patch };
@@ -342,10 +353,12 @@
   // FILTERING
   // ============================================================
   let showRemoved = false;
+  let notesOnly   = false;
 
   function passesFilter(sale) {
     const s = getSaleState(sale.id);
     if (s.removed && !showRemoved) return false;
+    if (notesOnly && !(s.notes && s.notes.trim())) return false;
     return true;
   }
 
@@ -364,6 +377,11 @@
     applyFilters();
   }
 
+  function onNotesOnlyChange() {
+    notesOnly = document.getElementById("notes-only").checked;
+    applyFilters();
+  }
+
   // ============================================================
   // MARKER RENDERING
   // ============================================================
@@ -377,7 +395,7 @@
     if (sale && sale.infoCenter) return INFO_PIN;
     const starLevel = STAR_LEVELS.find(l => l.stars === s.stars);
     if (starLevel) return starLevel;
-    return DEFAULT_PIN;
+    return (sale && sale.text) ? DEFAULT_PIN : DEFAULT_PIN_SLIM;
   }
 
   function makeIcon(id) {
@@ -385,9 +403,11 @@
     const s      = getSaleState(id);
     const sale   = salesById[id];
     let label = (!s.removed && s.stars > 0) ? "★".repeat(s.stars) : "";
+    if (!s.removed && s.visited) label = "✕";
     if (!s.removed && sale && sale.infoCenter) label = "i";
+    const border = (!s.removed && s.visited) ? VISITED_BORDER : DEFAULT_BORDER;
     return L.divIcon({
-      html: `<div class="pin${sale && sale.infoCenter ? " info-center" : ""}" style="width:${size}px;height:${size}px;background:${color};border:2px solid rgba(255,255,255,0.85)">${label}</div>`,
+      html: `<div class="pin${sale && sale.infoCenter ? " info-center" : ""}" style="width:${size}px;height:${size}px;background:${color};border:${border}">${label}</div>`,
       className:  "",
       iconSize:   [size, size],
       iconAnchor: [size / 2, size / 2],
@@ -421,6 +441,10 @@
       ? `<button class="btn btn-restore" onclick="window.setSaleRemoved('${sale.id}', false)">↩ Restore</button>`
       : `<button class="btn btn-remove"  onclick="window.setSaleRemoved('${sale.id}', true)">✕ Remove</button>`;
 
+    const visitedBtn = s.visited
+      ? `<button class="btn btn-visited current" onclick="window.setSaleVisited('${sale.id}', false)">✕ Visited</button>`
+      : `<button class="btn btn-neutral" onclick="window.setSaleVisited('${sale.id}', true)">Mark visited</button>`;
+
     return `
       <div class="sale-popup">
         <div class="popup-address">${esc(sale.address)}</div>
@@ -435,6 +459,7 @@
 
         <div class="popup-actions">
           ${starBtns}
+          ${visitedBtn}
           ${actionBtn}
         </div>
       </div>`;
@@ -453,6 +478,7 @@
   // ============================================================
   window.setSaleStars   = (id, n)   => updateSaleState(id, { stars: n });
   window.setSaleRemoved = (id, val) => updateSaleState(id, { removed: val });
+  window.setSaleVisited = (id, val) => updateSaleState(id, { visited: val });
 
   window.setSaleNotes = (id, v) => {
     state[id] = { ...getSaleState(id), notes: v };
@@ -472,6 +498,7 @@
   };
 
   window.onShowRemovedChange = onShowRemovedChange;
+  window.onNotesOnlyChange   = onNotesOnlyChange;
 
   window.clearAllStars = function() {
     if (!confirm("Clear all star ratings?")) return;
@@ -603,15 +630,21 @@
 
     const legendRows = [
       ...STAR_LEVELS.map(l => ({ color: l.color, text: `${"★".repeat(l.stars)} ${l.label}` })),
-      { color: DEFAULT_PIN.color, text: "Not yet rated" },
-      { color: INFO_PIN.color,    text: "Info center" },
-      { color: REMOVED_PIN.color, text: "Removed" },
+      { color: DEFAULT_PIN.color,      text: "Not yet rated (has item list)" },
+      { color: DEFAULT_PIN_SLIM.color, text: "Not yet rated (no item list yet)", slim: true },
+      { color: DEFAULT_PIN.color,      text: "Visited", border: VISITED_BORDER },
+      { color: INFO_PIN.color,         text: "Info center" },
+      { color: REMOVED_PIN.color,      text: "Removed" },
     ];
     document.getElementById("legend").innerHTML = legendRows
-      .map(r => `<div class="legend-row">
-                  <div class="legend-dot" style="background:${r.color}"></div>
+      .map(r => {
+        const size   = r.slim ? "7px" : "12px";
+        const border = r.border || DEFAULT_BORDER;
+        return `<div class="legend-row">
+                  <div class="legend-dot" style="background:${r.color};width:${size};height:${size};border:${border}"></div>
                   <span>${esc(r.text)}</span>
-                </div>`)
+                </div>`;
+      })
       .join("");
 
     placeAllMarkers();
