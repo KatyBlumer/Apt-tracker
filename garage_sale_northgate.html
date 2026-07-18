@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Northgate Garage Sale 7/18</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    /* ============================================================
+       Layout
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; }
+    #map { position: absolute; inset: 0; }
+
+    /* ============================================================
+       Controls panel (floating top-left)
+    ============================================================ */
+    #controls {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 1000;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.22);
+      width: 280px;
+      max-height: calc(100vh - 24px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #controls-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #1e3a5f;
+      color: white;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #controls-header h2 { font-size: 14px; font-weight: 700; margin: 0; }
+    #controls-toggle { background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 0; }
+
+    #controls-body {
+      overflow-y: auto;
+      padding: 12px 14px;
+    }
+    #controls-body.hidden { display: none; }
+
+    .event-meta {
+      font-size: 12px;
+      color: #374151;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+    .event-meta strong { color: #1e40af; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 8px 0 5px;
+    }
+
+    /* Legend */
+    .legend { display: flex; flex-direction: column; gap: 4px; }
+    .legend-row { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+    .legend-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.7);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+
+    /* Misc controls */
+    .ctrl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .ctrl-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+    #geocode-status {
+      font-size: 11px;
+      color: #92400e;
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-bottom: 10px;
+      display: none;
+    }
+    #geocode-status.active { display: block; }
+
+    /* ============================================================
+       Pins
+    ============================================================ */
+    .pin {
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.85);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 7px;
+      color: rgba(255,255,255,0.95);
+      font-weight: 900;
+      cursor: pointer;
+      line-height: 1;
+      transition: transform 0.12s;
+    }
+    .pin:hover { transform: scale(1.25); }
+    .pin.info-center { font-size: 9px; }
+
+    /* ============================================================
+       Popup
+    ============================================================ */
+    .sale-popup { font-size: 13px; min-width: 240px; max-width: 300px; }
+
+    .popup-address { font-weight: 700; font-size: 15px; margin-bottom: 3px; }
+    .popup-info-badge {
+      display: inline-block; background: #dbeafe; color: #1e40af;
+      font-size: 11px; font-weight: 700; padding: 2px 7px;
+      border-radius: 10px; margin-bottom: 8px;
+    }
+
+    /* Notes section — yellow-tinted */
+    .popup-notes-section {
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      padding: 8px;
+      margin: 8px 0;
+    }
+    .popup-notes-section .popup-section-label { color: #92400e; font-size: 11px; font-weight: 700; margin-bottom: 5px; }
+    .popup-notes {
+      width: 100%; min-height: 44px;
+      border: 1px solid #fcd34d; border-radius: 4px;
+      padding: 4px 6px; font-size: 12px;
+      resize: vertical; font-family: inherit; background: white;
+    }
+
+    /* Action buttons */
+    .popup-actions { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+
+    .btn {
+      padding: 5px 9px; border-radius: 5px; border: 1.5px solid;
+      cursor: pointer; font-size: 12px; font-weight: 600;
+      font-family: inherit; transition: opacity 0.12s;
+    }
+    .btn:hover  { opacity: 0.82; }
+    .btn:active { transform: scale(0.96); }
+    .btn.current { box-shadow: 0 0 0 2px rgba(0,0,0,0.25); }
+
+    .btn-star1   { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+    .btn-star2   { background: #ffedd5; border-color: #f97316; color: #7c2d12; }
+    .btn-star3   { background: #fee2e2; border-color: #ef4444; color: #7f1d1d; }
+    .btn-neutral { background: #f3f4f6; border-color: #9ca3af; color: #374151; }
+    .btn-remove  { background: #f9fafb; border-color: #6b7280; color: #374151; }
+    .btn-restore { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="controls">
+    <div id="controls-header" onclick="toggleControls()">
+      <h2>🏷️ Northgate Garage Sale</h2>
+      <button id="controls-toggle" aria-label="Collapse">▲</button>
+    </div>
+    <div id="controls-body">
+      <div class="event-meta">
+        <strong>35th Annual Northgate Neighborhood Garage Sale</strong><br>
+        📅 Saturday, July 18, 2026<br>
+        🕐 9am – 1pm<br>
+        Walnut Creek, CA · 81 addresses
+      </div>
+
+      <div id="geocode-status"></div>
+
+      <div class="ctrl-row">
+        <label>
+          <input type="checkbox" id="show-removed" onchange="onShowRemovedChange()">
+          Show removed
+        </label>
+        <button class="btn btn-neutral" style="margin-left:auto;font-size:11px" onclick="clearAllStars()">Clear stars</button>
+      </div>
+
+      <div class="section-label">Legend</div>
+      <div class="legend" id="legend"></div>
+
+      <div class="section-label" style="margin-top:10px">Source</div>
+      <div style="font-size:11px;color:#6b7280;line-height:1.5">
+        Address list from
+        <a href="https://torreyteamrealestate.com/2026-35th-annual-northgate-neighborhood-garage-sale/" target="_blank" rel="noopener">Torrey Team Real Estate</a>.
+        Last-minute additions/cancellations are expected — neither Torrey Team nor Compass benefit financially from this event.
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase: initializes window.GS_FB and fires "gs-fb-ready" -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, onSnapshot }
+      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const db = getFirestore(initializeApp({
+      apiKey:            "AIzaSyBQE_jALldqxkmkk01oLwyfiDAlj5HnMS0",
+      authDomain:        "apartment-hunt-2026.firebaseapp.com",
+      projectId:         "apartment-hunt-2026",
+      storageBucket:     "apartment-hunt-2026.firebasestorage.app",
+      messagingSenderId: "636926285570",
+      appId:             "1:636926285570:web:07bb863c19a7f8a4c5541b",
+    }));
+
+    const STATE_COLL   = collection(db, "garage_sale_northgate", "2026", "entries");
+    const GEOCODE_COLL = collection(db, "garage_sale_northgate", "2026", "geocode");
+
+    window.GS_FB = {
+      subscribe(cb) {
+        return onSnapshot(STATE_COLL, snap => {
+          const entries = {};
+          snap.forEach(d => { entries[d.id] = d.data(); });
+          cb(entries);
+        }, err => console.error("Firestore error (state):", err));
+      },
+      async save(id, data) {
+        await setDoc(doc(STATE_COLL, id), data);
+      },
+      subscribeGeocode(cb) {
+        return onSnapshot(GEOCODE_COLL, snap => {
+          const entries = {};
+          snap.forEach(d => { entries[d.id] = d.data(); });
+          cb(entries);
+        }, err => console.error("Firestore error (geocode):", err));
+      },
+      async saveGeocode(id, data) {
+        await setDoc(doc(GEOCODE_COLL, id), data);
+      },
+    };
+    window.dispatchEvent(new Event("gs-fb-ready"));
+  </script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+  "use strict";
+
+  // ============================================================
+  // CONFIG
+  // ============================================================
+  const DATA_URL   = "garage_sales/northgate_2026_addresses.json";
+  const STATE_KEY  = "gs_northgate_2026";
+  const GEOCODE_KEY = "gs_northgate_2026_geocode";
+  const MAP_CENTER = [37.912, -122.045]; // Northgate neighborhood, Walnut Creek
+  const MAP_ZOOM   = 14;
+  const GEOCODE_CITY_STATE = "Walnut Creek, CA";
+  const GEOCODE_DELAY_MS = 1100; // Nominatim fair-use: max 1 req/sec
+
+  const STAR_LEVELS = [
+    { stars: 1, label: "Good",     color: "#f59e0b", size: 14 },
+    { stars: 2, label: "Great",    color: "#f97316", size: 17 },
+    { stars: 3, label: "Must-see", color: "#ef4444", size: 21 },
+  ];
+  const DEFAULT_PIN   = { color: "#3b82f6", size: 12 };
+  const REMOVED_PIN   = { color: "#9ca3af", size: 8  };
+  const INFO_PIN      = { color: "#059669", size: 16 };
+
+  // ============================================================
+  // STATE — user ratings/notes, persisted to localStorage + Firebase
+  // ============================================================
+  let state = {};
+
+  function loadState() {
+    try { state = JSON.parse(localStorage.getItem(STATE_KEY) || "{}"); }
+    catch { state = {}; }
+  }
+  function saveState() {
+    localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  }
+  function getSaleState(id) {
+    return state[id] || { stars: 0, removed: false, notes: "" };
+  }
+  function updateSaleState(id, patch) {
+    state[id] = { ...getSaleState(id), ...patch };
+    saveState();
+    if (window.GS_FB) GS_FB.save(id, getSaleState(id));
+    refreshMarker(id);
+    refreshPopup(id);
+  }
+
+  // ============================================================
+  // GEOCODE CACHE — lat/lng per address, persisted to localStorage + Firebase
+  // ============================================================
+  let geocodeCache = {};
+
+  function loadGeocodeCache() {
+    try { geocodeCache = JSON.parse(localStorage.getItem(GEOCODE_KEY) || "{}"); }
+    catch { geocodeCache = {}; }
+  }
+  function saveGeocodeCache() {
+    localStorage.setItem(GEOCODE_KEY, JSON.stringify(geocodeCache));
+  }
+
+  // ============================================================
+  // FIREBASE SYNC
+  // ============================================================
+  let notesSaveTimer = null;
+
+  function initFirebase() {
+    GS_FB.subscribe(entries => {
+      for (const [id, data] of Object.entries(entries)) state[id] = data;
+      saveState();
+      for (const id of Object.keys(markers)) refreshMarker(id);
+      if (activeSaleId) refreshPopup(activeSaleId);
+    });
+    GS_FB.subscribeGeocode(entries => {
+      let changed = false;
+      for (const [id, data] of Object.entries(entries)) {
+        if (data && data.lat != null && data.lng != null) {
+          if (!geocodeCache[id]) changed = true;
+          geocodeCache[id] = { lat: data.lat, lng: data.lng };
+        }
+      }
+      if (changed) {
+        saveGeocodeCache();
+        placeAllMarkers();
+        maybeStartGeocoding();
+      }
+    });
+  }
+
+  window.addEventListener("gs-fb-ready", initFirebase);
+  if (window.GS_FB) initFirebase();
+
+  // ============================================================
+  // FILTERING
+  // ============================================================
+  let showRemoved = false;
+
+  function passesFilter(sale) {
+    const s = getSaleState(sale.id);
+    if (s.removed && !showRemoved) return false;
+    return true;
+  }
+
+  function applyFilters() {
+    for (const [id, marker] of Object.entries(markers)) {
+      const sale = salesById[id];
+      if (!sale) continue;
+      const visible = passesFilter(sale);
+      if (visible && !map.hasLayer(marker)) marker.addTo(map);
+      if (!visible && map.hasLayer(marker))  marker.remove();
+    }
+  }
+
+  function onShowRemovedChange() {
+    showRemoved = document.getElementById("show-removed").checked;
+    applyFilters();
+  }
+
+  // ============================================================
+  // MARKER RENDERING
+  // ============================================================
+  const markers   = {};
+  const salesById = {};
+
+  function pinStyle(id) {
+    const s = getSaleState(id);
+    const sale = salesById[id];
+    if (s.removed) return REMOVED_PIN;
+    if (sale && sale.infoCenter) return INFO_PIN;
+    const starLevel = STAR_LEVELS.find(l => l.stars === s.stars);
+    if (starLevel) return starLevel;
+    return DEFAULT_PIN;
+  }
+
+  function makeIcon(id) {
+    const { color, size } = pinStyle(id);
+    const s      = getSaleState(id);
+    const sale   = salesById[id];
+    let label = (!s.removed && s.stars > 0) ? "★".repeat(s.stars) : "";
+    if (!s.removed && sale && sale.infoCenter) label = "i";
+    return L.divIcon({
+      html: `<div class="pin${sale && sale.infoCenter ? " info-center" : ""}" style="width:${size}px;height:${size}px;background:${color};border:2px solid rgba(255,255,255,0.85)">${label}</div>`,
+      className:  "",
+      iconSize:   [size, size],
+      iconAnchor: [size / 2, size / 2],
+    });
+  }
+
+  function refreshMarker(id) {
+    const marker = markers[id];
+    if (marker) {
+      marker.setIcon(makeIcon(id));
+      applyFilters();
+    }
+  }
+
+  // ============================================================
+  // POPUP CONTENT
+  // ============================================================
+  let activeSaleId = null;
+
+  function makePopupContent(sale) {
+    const s = getSaleState(sale.id);
+
+    const starBtns = STAR_LEVELS
+      .map(l => `<button class="btn btn-star${l.stars}${s.stars === l.stars ? " current" : ""}"
+                         onclick="window.setSaleStars('${sale.id}', ${s.stars === l.stars ? 0 : l.stars})">
+                   ${"★".repeat(l.stars)} ${esc(l.label)}
+                 </button>`)
+      .join("");
+
+    const actionBtn = s.removed
+      ? `<button class="btn btn-restore" onclick="window.setSaleRemoved('${sale.id}', false)">↩ Restore</button>`
+      : `<button class="btn btn-remove"  onclick="window.setSaleRemoved('${sale.id}', true)">✕ Remove</button>`;
+
+    return `
+      <div class="sale-popup">
+        <div class="popup-address">${esc(sale.address)}</div>
+        ${sale.infoCenter ? `<div class="popup-info-badge">ℹ️ Info Center</div>` : ""}
+
+        <div class="popup-notes-section">
+          <div class="popup-section-label">My notes</div>
+          <textarea class="popup-notes"
+            oninput="window.setSaleNotes('${sale.id}', this.value)"
+            placeholder="Add notes…">${esc(s.notes || "")}</textarea>
+        </div>
+
+        <div class="popup-actions">
+          ${starBtns}
+          ${actionBtn}
+        </div>
+      </div>`;
+  }
+
+  function refreshPopup(id) {
+    const marker = markers[id];
+    const sale   = salesById[id];
+    if (marker && sale && marker.isPopupOpen()) {
+      marker.setPopupContent(makePopupContent(sale));
+    }
+  }
+
+  // ============================================================
+  // POPUP ACTION HANDLERS
+  // ============================================================
+  window.setSaleStars   = (id, n)   => updateSaleState(id, { stars: n });
+  window.setSaleRemoved = (id, val) => updateSaleState(id, { removed: val });
+
+  window.setSaleNotes = (id, v) => {
+    state[id] = { ...getSaleState(id), notes: v };
+    saveState();
+    clearTimeout(notesSaveTimer);
+    notesSaveTimer = setTimeout(() => { if (window.GS_FB) GS_FB.save(id, getSaleState(id)); }, 800);
+  };
+
+  // ============================================================
+  // CONTROLS UI HANDLERS
+  // ============================================================
+  window.toggleControls = function() {
+    const body = document.getElementById("controls-body");
+    const btn  = document.getElementById("controls-toggle");
+    body.classList.toggle("hidden");
+    btn.textContent = body.classList.contains("hidden") ? "▼" : "▲";
+  };
+
+  window.onShowRemovedChange = onShowRemovedChange;
+
+  window.clearAllStars = function() {
+    if (!confirm("Clear all star ratings?")) return;
+    for (const id of Object.keys(state)) {
+      if (state[id].stars) {
+        state[id] = { ...state[id], stars: 0 };
+        refreshMarker(id);
+      }
+    }
+    saveState();
+    if (activeSaleId) refreshPopup(activeSaleId);
+  };
+
+  // ============================================================
+  // UTILITY
+  // ============================================================
+  function esc(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  // ============================================================
+  // CLIENT-SIDE GEOCODING (Nominatim)
+  // Runs in the visitor's browser — one address at a time, 1/sec,
+  // caching every result to Firebase so it's a one-time cost overall.
+  // ============================================================
+  let geocoding = false;
+
+  async function geocodeAddress(address) {
+    const q = `${address}, ${GEOCODE_CITY_STATE}`;
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
+    const res = await fetch(url, { headers: { "Accept": "application/json" } });
+    const data = await res.json();
+    if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    return null;
+  }
+
+  function setGeocodeStatus(text) {
+    const el = document.getElementById("geocode-status");
+    if (!text) { el.classList.remove("active"); el.textContent = ""; return; }
+    el.classList.add("active");
+    el.textContent = text;
+  }
+
+  async function maybeStartGeocoding() {
+    if (geocoding) return;
+    const todo = Object.values(salesById).filter(s => !geocodeCache[s.id]);
+    if (todo.length === 0) { setGeocodeStatus(""); return; }
+    geocoding = true;
+    let done = 0;
+    const total = todo.length;
+    for (const sale of todo) {
+      if (geocodeCache[sale.id]) continue; // may have been filled by another tab via Firestore
+      setGeocodeStatus(`📍 Locating addresses… ${done}/${total}`);
+      try {
+        const result = await geocodeAddress(sale.address);
+        if (result) {
+          geocodeCache[sale.id] = result;
+          saveGeocodeCache();
+          placeMarker(sale, result);
+          if (window.GS_FB) GS_FB.saveGeocode(sale.id, result);
+        }
+      } catch (e) {
+        console.warn("geocode failed for", sale.address, e);
+      }
+      done++;
+      await new Promise(r => setTimeout(r, GEOCODE_DELAY_MS));
+    }
+    geocoding = false;
+    setGeocodeStatus("");
+  }
+
+  // ============================================================
+  // MARKER PLACEMENT
+  // ============================================================
+  let hasFitBounds = false;
+
+  function placeMarker(sale, latlng) {
+    if (markers[sale.id]) return;
+    const marker = L.marker([latlng.lat, latlng.lng], {
+      icon:  makeIcon(sale.id),
+      title: sale.address,
+    });
+    marker.bindPopup(() => makePopupContent(sale), { maxWidth: 320, minWidth: 240 });
+    marker.on("popupopen",  () => { activeSaleId = sale.id; });
+    marker.on("popupclose", () => { if (activeSaleId === sale.id) activeSaleId = null; });
+    markers[sale.id] = marker;
+    if (passesFilter(sale)) marker.addTo(map);
+    fitBoundsIfNeeded();
+  }
+
+  function placeAllMarkers() {
+    for (const sale of Object.values(salesById)) {
+      const cached = geocodeCache[sale.id];
+      if (cached) placeMarker(sale, cached);
+    }
+    fitBoundsIfNeeded();
+  }
+
+  // Fit the map to the markers once, the first time we have enough of them
+  // to be a meaningful view — after that, leave the user's pan/zoom alone.
+  function fitBoundsIfNeeded() {
+    if (hasFitBounds) return;
+    const count = Object.keys(markers).length;
+    if (count < 5) return;
+    hasFitBounds = true;
+    const group = L.featureGroup(Object.values(markers));
+    map.fitBounds(group.getBounds().pad(0.1));
+  }
+
+  // ============================================================
+  // INIT
+  // ============================================================
+  let map;
+
+  async function init() {
+    loadState();
+    loadGeocodeCache();
+
+    map = L.map("map").setView(MAP_CENTER, MAP_ZOOM);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+      maxZoom: 19,
+    }).addTo(map);
+
+    const sales = await fetch(DATA_URL).then(r => r.json());
+    for (const sale of sales) salesById[sale.id] = sale;
+
+    const legendRows = [
+      ...STAR_LEVELS.map(l => ({ color: l.color, text: `${"★".repeat(l.stars)} ${l.label}` })),
+      { color: DEFAULT_PIN.color, text: "Not yet rated" },
+      { color: INFO_PIN.color,    text: "Info center" },
+      { color: REMOVED_PIN.color, text: "Removed" },
+    ];
+    document.getElementById("legend").innerHTML = legendRows
+      .map(r => `<div class="legend-row">
+                  <div class="legend-dot" style="background:${r.color}"></div>
+                  <span>${esc(r.text)}</span>
+                </div>`)
+      .join("");
+
+    placeAllMarkers();
+    applyFilters();
+    maybeStartGeocoding();
+  }
+
+  init().catch(err => {
+    document.body.innerHTML = `<p style="padding:20px;color:red">
+      Failed to load sale data: ${err.message}<br>
+      Make sure <code>garage_sales/northgate_2026_addresses.json</code> exists.
+    </p>`;
+  });
+  </script>
+</body>
+</html>
