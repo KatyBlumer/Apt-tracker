@@ -438,7 +438,7 @@
       <div class="sale-popup">
         <div class="popup-address">${esc(sale.address)}</div>
         ${sale.infoCenter ? `<div class="popup-info-badge">ℹ️ Info Center</div>` : ""}
-        ${sale.text ? `<div class="popup-items">${esc(sale.text)}</div>` : ""}
+        ${sale.text ? `<div class="popup-items">${formatItemText(sale.text)}</div>` : ""}
 
         <div class="popup-notes-section">
           <div class="popup-section-label">My notes</div>
@@ -517,6 +517,17 @@
     return String(s ?? "")
       .replace(/&/g, "&amp;").replace(/</g, "&lt;")
       .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  // Bolds the "Category: " prefix on each line of an item list.
+  function formatItemText(text) {
+    return text.split("\n").map(line => {
+      const idx = line.indexOf(": ");
+      if (idx === -1) return esc(line);
+      const header = line.slice(0, idx);
+      const rest   = line.slice(idx + 2);
+      return `<strong>${esc(header)}:</strong> ${esc(rest)}`;
+    }).join("\n");
   }
 
   // ============================================================
