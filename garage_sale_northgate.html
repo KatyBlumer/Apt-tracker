@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Northgate Garage Sale 7/18</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    /* ============================================================
+       Layout
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; }
+    #map { position: absolute; inset: 0; }
+
+    /* ============================================================
+       Controls panel (floating top-left)
+    ============================================================ */
+    #controls {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 1000;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.22);
+      width: 280px;
+      max-height: calc(100vh - 24px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #controls-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #1e3a5f;
+      color: white;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #controls-header h2 { font-size: 14px; font-weight: 700; margin: 0; flex: 1; }
+    #controls-toggle { background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 0; }
+    .list-link {
+      color: white; text-decoration: none; font-size: 11px; font-weight: 600;
+      background: rgba(255,255,255,0.15); padding: 4px 8px; border-radius: 5px;
+      white-space: nowrap; margin-right: 8px;
+    }
+    .list-link:hover { background: rgba(255,255,255,0.25); }
+
+    #controls-body {
+      overflow-y: auto;
+      padding: 12px 14px;
+    }
+    #controls-body.hidden { display: none; }
+
+    .event-meta-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    #event-meta-chevron { background: none; border: none; color: #1e40af; font-size: 11px; cursor: pointer; padding: 0; }
+
+    .event-meta {
+      font-size: 12px;
+      color: #374151;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+    .event-meta.hidden { display: none; }
+    .event-meta strong { color: #1e40af; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 8px 0 5px;
+    }
+
+    /* Legend */
+    .legend { display: flex; flex-direction: column; gap: 4px; }
+    .legend-row { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+    .legend-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.7);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+
+    /* Misc controls */
+    .ctrl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .ctrl-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+    #geocode-status {
+      font-size: 11px;
+      color: #92400e;
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+      display: none;
+    }
+    #geocode-status.active { display: block; }
+
+    /* ============================================================
+       Pins
+    ============================================================ */
+    .pin {
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.85);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 7px;
+      color: rgba(255,255,255,0.95);
+      font-weight: 900;
+      cursor: pointer;
+      line-height: 1;
+      transition: transform 0.12s;
+    }
+    .pin:hover { transform: scale(1.25); }
+    .pin.info-center { font-size: 9px; }
+    .pin.extra-pin { font-size: 12px; }
+
+    /* ============================================================
+       Popup
+    ============================================================ */
+    .sale-popup { font-size: 13px; min-width: 240px; max-width: 300px; }
+
+    .popup-address { font-weight: 700; font-size: 15px; margin-bottom: 3px; }
+    .popup-info-badge {
+      display: inline-block; background: #dbeafe; color: #1e40af;
+      font-size: 11px; font-weight: 700; padding: 2px 7px;
+      border-radius: 10px; margin-bottom: 8px;
+    }
+
+    .popup-items {
+      color: #374151; font-size: 12px; line-height: 1.5;
+      max-height: 130px; overflow-y: auto;
+      white-space: pre-wrap; margin: 8px 0;
+      background: #f9fafb; border: 1px solid #e5e7eb;
+      border-radius: 6px; padding: 6px 8px;
+    }
+
+    .popup-cats { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+    .popup-cat { padding: 2px 8px; background: #ede9fe; color: #5b21b6; border-radius: 10px; font-size: 11px; }
+    .popup-tip { font-size: 11px; color: #6b7280; font-style: italic; margin: 6px 0; }
+
+    /* Notes section — yellow-tinted */
+    .popup-notes-section {
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      padding: 8px;
+      margin: 8px 0;
+    }
+    .popup-notes-section .popup-section-label { color: #92400e; font-size: 11px; font-weight: 700; margin-bottom: 5px; }
+    .popup-notes {
+      width: 100%; min-height: 44px;
+      border: 1px solid #fcd34d; border-radius: 4px;
+      padding: 4px 6px; font-size: 12px;
+      resize: vertical; font-family: inherit; background: white;
+    }
+
+    /* Action buttons */
+    .popup-actions { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+
+    .btn {
+      padding: 5px 9px; border-radius: 5px; border: 1.5px solid;
+      cursor: pointer; font-size: 12px; font-weight: 600;
+      font-family: inherit; transition: opacity 0.12s;
+    }
+    .btn:hover  { opacity: 0.82; }
+    .btn:active { transform: scale(0.96); }
+    .btn.current { box-shadow: 0 0 0 2px rgba(0,0,0,0.25); }
+
+    .btn-star1   { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+    .btn-star2   { background: #ffedd5; border-color: #f97316; color: #7c2d12; }
+    .btn-star3   { background: #fee2e2; border-color: #ef4444; color: #7f1d1d; }
+    .btn-neutral { background: #f3f4f6; border-color: #9ca3af; color: #374151; }
+    .btn-remove  { background: #f9fafb; border-color: #6b7280; color: #374151; }
+    .btn-restore { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+    .btn-visited { background: #dcfce7; border-color: #15803d; color: #14532d; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="controls">
+    <div id="controls-header" onclick="toggleControls()">
+      <h2>🏷️ Northgate Garage Sale</h2>
+      <a href="garage_sale_northgate_list.html" class="list-link" onclick="event.stopPropagation()">📋 List</a>
+      <button id="controls-toggle" aria-label="Collapse">▲</button>
+    </div>
+    <div id="controls-body">
+      <div class="event-meta-toggle" onclick="toggleEventMeta()">
+        <span>ℹ️ Event info</span>
+        <button id="event-meta-chevron" aria-label="Expand">▼</button>
+      </div>
+      <div class="event-meta hidden" id="event-meta-body">
+        <strong>35th Annual Northgate Neighborhood Garage Sale</strong><br>
+        📅 Saturday, July 18, 2026<br>
+        🕐 9am – 1pm<br>
+        Walnut Creek, CA · 81 addresses
+        <hr style="border:none;border-top:1px solid #bfdbfe;margin:8px 0">
+        Address list and item descriptions from the sign-up form for
+        <a href="https://torreyteamrealestate.com/2026-35th-annual-northgate-neighborhood-garage-sale/" target="_blank" rel="noopener">Torrey Team Real Estate</a>'s
+        event. Last-minute additions/cancellations are expected — neither Torrey Team nor Compass benefit financially from this event.
+      </div>
+
+      <div id="geocode-status"></div>
+
+      <div class="ctrl-row">
+        <input type="text" id="search-text" placeholder="Search items (e.g. tools, vinyl)…" oninput="onSearchChange()"
+               style="width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:5px 7px;font-size:12px;font-family:inherit">
+      </div>
+
+      <div class="ctrl-row">
+        <label>
+          <input type="checkbox" id="show-removed" onchange="onShowRemovedChange()">
+          Show removed
+        </label>
+        <button class="btn btn-neutral" style="margin-left:auto;font-size:11px" onclick="clearAllStars()">Clear stars</button>
+      </div>
+
+      <div class="ctrl-row">
+        <label>
+          <input type="checkbox" id="notes-only" onchange="onNotesOnlyChange()">
+          Only show ones with my notes
+        </label>
+      </div>
+
+      <div class="section-label">Legend</div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+
+  <!-- Firebase: initializes window.GS_FB and fires "gs-fb-ready" -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, onSnapshot }
+      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const db = getFirestore(initializeApp({
+      apiKey:            "AIzaSyBQE_jALldqxkmkk01oLwyfiDAlj5HnMS0",
+      authDomain:        "apartment-hunt-2026.firebaseapp.com",
+      projectId:         "apartment-hunt-2026",
+      storageBucket:     "apartment-hunt-2026.firebasestorage.app",
+      messagingSenderId: "636926285570",
+      appId:             "1:636926285570:web:07bb863c19a7f8a4c5541b",
+    }));
+
+    const STATE_COLL = collection(db, "garage_sale_northgate", "2026", "entries");
+
+    window.GS_FB = {
+      subscribe(cb) {
+        return onSnapshot(STATE_COLL, snap => {
+          const entries = {};
+          snap.forEach(d => { entries[d.id] = d.data(); });
+          cb(entries);
+        }, err => console.error("Firestore error:", err));
+      },
+      async save(id, data) {
+        await setDoc(doc(STATE_COLL, id), data, { merge: true });
+      },
+    };
+    window.dispatchEvent(new Event("gs-fb-ready"));
+  </script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+  "use strict";
+
+  // ============================================================
+  // CONFIG
+  // ============================================================
+  const DATA_URL  = "garage_sales/northgate_2026_addresses.json";
+  const STATE_KEY = "gs_northgate_2026";
+  const MAP_CENTER = [37.912, -122.045]; // Northgate neighborhood, Walnut Creek
+  const MAP_ZOOM   = 14;
+
+  const STAR_LEVELS = [
+    { stars: 1, label: "Good",     color: "#f59e0b", size: 14 },
+    { stars: 2, label: "Great",    color: "#f97316", size: 17 },
+    { stars: 3, label: "Must-see", color: "#ef4444", size: 21 },
+  ];
+  const DEFAULT_PIN      = { color: "#3b82f6", size: 12 };
+  const REMOVED_PIN      = { color: "#9ca3af", size: 8  };
+  const INFO_PIN         = { color: "#059669", size: 16 };
+  const EXTRA_PIN        = { color: "#7c3aed", size: 26 }; // big purple = found separately, not in the sign-up sheet
+  const GEOCODE_DELAY_MS = 1100; // Nominatim fair-use: max 1 req/sec
+  const VISITED_BORDER   = "2px solid #15803d"; // dark green = visited
+  const HAS_TEXT_BORDER  = "2px solid #111827"; // black = has an item description
+  const DEFAULT_BORDER   = "2px solid rgba(255,255,255,0.85)";
+
+  // One-off sales found separately from the Northgate sign-up sheet —
+  // geocoded client-side on first visit (like everything else in this
+  // app respects Nominatim's fair-use policy), then cached in Firebase
+  // via the normal per-address state doc so it only happens once ever.
+  const EXTRA_PINS = [
+    {
+      id: "105-sutton-cir-danville",
+      address: "105 Sutton Cir",
+      cityLabel: "Danville, CA 94506",
+      description: "Homes in Meridian Place with a great mix of items, including furniture (roll top desk, leather sofas, storage end table), household items, decor, wall art, knick knacks, pet supplies (carrier bag, and more), tools, diving gear (snorkel and scuba), shoes, kitchen wares, baking pans, books, women's clothing, men's clothing, beach chairs, resin patio table and chairs, doggy door insert for full-size sliding glass door.",
+      categories: ["Home goods", "Kitchen Items or Cookware", "Sporting Goods", "Tools, Garden, or Hardware", "Furniture", "Art, Music or Books", "Clothing - Adult", "Pet Supplies"],
+      tip: "Bring a reusable bag to carry heavier items more easily and to protect fragile objects.",
+    },
+  ];
+
+  // Bigger found-separately sale groups (their own numbered address list),
+  // loaded from a JSON file the same shape as EXTRA_PINS entries above.
+  const EXTRA_PIN_DATA_URLS = [
+    "garage_sales/danville_chadbourne_addresses.json",
+  ];
+
+  // ============================================================
+  // STATE — user ratings/notes, persisted to localStorage + Firebase
+  // ============================================================
+  let state = {};
+
+  function loadState() {
+    try { state = JSON.parse(localStorage.getItem(STATE_KEY) || "{}"); }
+    catch { state = {}; }
+  }
+  function saveState() {
+    localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  }
+  function getSaleState(id) {
+    return state[id] || { stars: 0, removed: false, visited: false, notes: "" };
+  }
+  function updateSaleState(id, patch) {
+    state[id] = { ...getSaleState(id), ...patch };
+    saveState();
+    if (window.GS_FB) GS_FB.save(id, getSaleState(id));
+    refreshMarker(id);
+    refreshPopup(id);
+  }
+
+  // ============================================================
+  // FIREBASE SYNC
+  // ============================================================
+  let notesSaveTimer = null;
+
+  function initFirebase() {
+    GS_FB.subscribe(entries => {
+      for (const [id, data] of Object.entries(entries)) state[id] = data;
+      saveState();
+      for (const id of Object.keys(markers)) refreshMarker(id);
+      if (activeSaleId) refreshPopup(activeSaleId);
+      placeReadyExtraPins();
+    });
+  }
+
+  window.addEventListener("gs-fb-ready", initFirebase);
+  if (window.GS_FB) initFirebase();
+
+  // ============================================================
+  // FILTERING
+  // ============================================================
+  let showRemoved = false;
+  let notesOnly   = false;
+  let searchQuery = "";
+
+  function passesFilter(sale) {
+    const s = getSaleState(sale.id);
+    if (s.removed && !showRemoved) return false;
+    if (notesOnly && !(s.notes && s.notes.trim())) return false;
+    if (searchQuery) {
+      const haystack = `${sale.address} ${sale.text || ""}`.toLowerCase();
+      if (!haystack.includes(searchQuery)) return false;
+    }
+    return true;
+  }
+
+  function applyFilters() {
+    for (const [id, marker] of Object.entries(markers)) {
+      const sale = salesById[id];
+      if (!sale) continue;
+      const visible = passesFilter(sale);
+      if (visible && !map.hasLayer(marker)) marker.addTo(map);
+      if (!visible && map.hasLayer(marker))  marker.remove();
+    }
+  }
+
+  function onShowRemovedChange() {
+    showRemoved = document.getElementById("show-removed").checked;
+    applyFilters();
+  }
+
+  function onNotesOnlyChange() {
+    notesOnly = document.getElementById("notes-only").checked;
+    applyFilters();
+  }
+
+  function onSearchChange() {
+    searchQuery = document.getElementById("search-text").value.trim().toLowerCase();
+    applyFilters();
+  }
+
+  // ============================================================
+  // MARKER RENDERING
+  // ============================================================
+  const markers   = {};
+  const salesById = {};
+
+  function pinStyle(id) {
+    const s = getSaleState(id);
+    const sale = salesById[id];
+    if (s.removed) return REMOVED_PIN;
+    if (sale && sale.infoCenter) return INFO_PIN;
+    if (sale && sale.isExtra) return EXTRA_PIN;
+    const starLevel = STAR_LEVELS.find(l => l.stars === s.stars);
+    if (starLevel) return starLevel;
+    return DEFAULT_PIN;
+  }
+
+  function makeIcon(id) {
+    const { color, size } = pinStyle(id);
+    const s      = getSaleState(id);
+    const sale   = salesById[id];
+    let label = (!s.removed && s.stars > 0) ? "★".repeat(s.stars) : "";
+    if (!s.removed && sale && sale.isExtra) label = sale.num != null ? String(sale.num) : "📍";
+    if (!s.removed && s.visited) label = "✕";
+    if (!s.removed && sale && sale.infoCenter) label = "i";
+    let border = DEFAULT_BORDER;
+    if (!s.removed && sale && sale.text) border = HAS_TEXT_BORDER;
+    if (!s.removed && s.visited) border = VISITED_BORDER;
+    const pinClass = sale && sale.infoCenter ? " info-center" : sale && sale.isExtra ? " extra-pin" : "";
+    return L.divIcon({
+      html: `<div class="pin${pinClass}" style="width:${size}px;height:${size}px;background:${color};border:${border}">${label}</div>`,
+      className:  "",
+      iconSize:   [size, size],
+      iconAnchor: [size / 2, size / 2],
+    });
+  }
+
+  function refreshMarker(id) {
+    const marker = markers[id];
+    if (marker) {
+      marker.setIcon(makeIcon(id));
+      applyFilters();
+    }
+  }
+
+  // ============================================================
+  // POPUP CONTENT
+  // ============================================================
+  let activeSaleId = null;
+
+  function makePopupContent(sale) {
+    const s = getSaleState(sale.id);
+
+    const starBtns = STAR_LEVELS
+      .map(l => `<button class="btn btn-star${l.stars}${s.stars === l.stars ? " current" : ""}"
+                         onclick="window.setSaleStars('${sale.id}', ${s.stars === l.stars ? 0 : l.stars})">
+                   ${"★".repeat(l.stars)} ${esc(l.label)}
+                 </button>`)
+      .join("");
+
+    const actionBtn = s.removed
+      ? `<button class="btn btn-restore" onclick="window.setSaleRemoved('${sale.id}', false)">↩ Restore</button>`
+      : `<button class="btn btn-remove"  onclick="window.setSaleRemoved('${sale.id}', true)">✕ Remove</button>`;
+
+    const visitedBtn = s.visited
+      ? `<button class="btn btn-visited current" onclick="window.setSaleVisited('${sale.id}', false)">✕ Visited</button>`
+      : `<button class="btn btn-neutral" onclick="window.setSaleVisited('${sale.id}', true)">Mark visited</button>`;
+
+    const bodyHtml = sale.isExtra
+      ? `
+        <div class="popup-info-badge" style="background:#ede9fe;color:#5b21b6;">
+          📍 ${esc(sale.cityLabel)}${sale.num != null ? ` · House #${sale.num}` : ""} · found separately
+        </div>
+        ${sale.description ? `<div class="popup-items">${esc(sale.description)}</div>` : ""}
+        ${sale.categories && sale.categories.length ? `<div class="popup-cats">${sale.categories.map(c => `<span class="popup-cat">${esc(c)}</span>`).join("")}</div>` : ""}
+        ${sale.tip ? `<div class="popup-tip">💡 ${esc(sale.tip)}</div>` : ""}
+      `
+      : `
+        ${sale.infoCenter ? `<div class="popup-info-badge">ℹ️ Info Center</div>` : ""}
+        ${sale.text ? `<div class="popup-items">${formatItemText(sale.text)}</div>` : ""}
+      `;
+
+    return `
+      <div class="sale-popup">
+        <div class="popup-address">${esc(sale.address)}</div>
+        ${bodyHtml}
+
+        <div class="popup-notes-section">
+          <div class="popup-section-label">My notes</div>
+          <textarea class="popup-notes"
+            oninput="window.setSaleNotes('${sale.id}', this.value)"
+            placeholder="Add notes…">${esc(s.notes || "")}</textarea>
+        </div>
+
+        <div class="popup-actions">
+          ${starBtns}
+          ${visitedBtn}
+          ${actionBtn}
+        </div>
+      </div>`;
+  }
+
+  function refreshPopup(id) {
+    const marker = markers[id];
+    const sale   = salesById[id];
+    if (marker && sale && marker.isPopupOpen()) {
+      marker.setPopupContent(makePopupContent(sale));
+    }
+  }
+
+  // ============================================================
+  // POPUP ACTION HANDLERS
+  // ============================================================
+  window.setSaleStars   = (id, n)   => updateSaleState(id, { stars: n });
+  window.setSaleRemoved = (id, val) => updateSaleState(id, { removed: val });
+  window.setSaleVisited = (id, val) => updateSaleState(id, { visited: val });
+
+  window.setSaleNotes = (id, v) => {
+    state[id] = { ...getSaleState(id), notes: v };
+    saveState();
+    clearTimeout(notesSaveTimer);
+    notesSaveTimer = setTimeout(() => { if (window.GS_FB) GS_FB.save(id, getSaleState(id)); }, 800);
+  };
+
+  // ============================================================
+  // CONTROLS UI HANDLERS
+  // ============================================================
+  window.toggleControls = function() {
+    const body = document.getElementById("controls-body");
+    const btn  = document.getElementById("controls-toggle");
+    body.classList.toggle("hidden");
+    btn.textContent = body.classList.contains("hidden") ? "▼" : "▲";
+  };
+
+  window.toggleEventMeta = function() {
+    const body    = document.getElementById("event-meta-body");
+    const chevron = document.getElementById("event-meta-chevron");
+    body.classList.toggle("hidden");
+    chevron.textContent = body.classList.contains("hidden") ? "▼" : "▲";
+  };
+
+  window.onShowRemovedChange = onShowRemovedChange;
+  window.onNotesOnlyChange   = onNotesOnlyChange;
+  window.onSearchChange      = onSearchChange;
+
+  window.clearAllStars = function() {
+    if (!confirm("Clear all star ratings?")) return;
+    for (const id of Object.keys(state)) {
+      if (state[id].stars) {
+        state[id] = { ...state[id], stars: 0 };
+        refreshMarker(id);
+      }
+    }
+    saveState();
+    if (activeSaleId) refreshPopup(activeSaleId);
+  };
+
+  // ============================================================
+  // UTILITY
+  // ============================================================
+  function esc(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  // Bolds the "Category: " prefix on each line of an item list.
+  function formatItemText(text) {
+    return text.split("\n").map(line => {
+      const idx = line.indexOf(": ");
+      if (idx === -1) return esc(line);
+      const header = line.slice(0, idx);
+      const rest   = line.slice(idx + 2);
+      return `<strong>${esc(header)}:</strong> ${esc(rest)}`;
+    }).join("\n");
+  }
+
+  // ============================================================
+  // MARKER PLACEMENT
+  // ============================================================
+  function placeMarker(sale, latlng) {
+    if (markers[sale.id]) return;
+    const marker = L.marker([latlng.lat, latlng.lng], {
+      icon:  makeIcon(sale.id),
+      title: sale.address,
+    });
+    marker.bindPopup(() => makePopupContent(sale), { maxWidth: 320, minWidth: 240 });
+    marker.on("popupopen",  () => { activeSaleId = sale.id; });
+    marker.on("popupclose", () => { if (activeSaleId === sale.id) activeSaleId = null; });
+    markers[sale.id] = marker;
+    if (passesFilter(sale)) marker.addTo(map);
+  }
+
+  // ============================================================
+  // EXTRA PINS — sales found separately, outside the Northgate sheet.
+  // Geocoded client-side (in the visitor's browser, rate-limited to
+  // respect Nominatim's fair-use policy) since we don't have lat/lng
+  // for these; each result is cached forever in the same per-address
+  // Firebase state doc used for stars/notes, so it's a one-time cost.
+  // ============================================================
+  async function geocodeAddress(address) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+    const res = await fetch(url, { headers: { "Accept": "application/json" } });
+    const data = await res.json();
+    if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    return null;
+  }
+
+  // Places any extra pin that already has a lat/lng in `state` (e.g. just
+  // arrived via the Firestore subscription) but doesn't have a marker yet.
+  function placeReadyExtraPins() {
+    for (const sale of Object.values(salesById)) {
+      if (!sale.isExtra || markers[sale.id]) continue;
+      const s = state[sale.id];
+      if (s && s.lat != null && s.lng != null) {
+        placeMarker(sale, { lat: s.lat, lng: s.lng });
+      }
+    }
+  }
+
+  function setGeocodeStatus(text) {
+    const el = document.getElementById("geocode-status");
+    if (!el) return;
+    if (!text) { el.classList.remove("active"); el.textContent = ""; return; }
+    el.classList.add("active");
+    el.textContent = text;
+  }
+
+  async function geocodeExtraPins() {
+    const todo = Object.values(salesById).filter(s => s.isExtra && !markers[s.id]);
+    let needsGeocode = 0;
+    for (const sale of todo) {
+      const cached = state[sale.id];
+      if (cached && cached.lat != null && cached.lng != null) {
+        placeMarker(sale, { lat: cached.lat, lng: cached.lng });
+      } else {
+        needsGeocode++;
+      }
+    }
+    if (needsGeocode === 0) return;
+
+    let done = 0;
+    for (const sale of todo) {
+      if (markers[sale.id]) continue; // already placed from cache above
+      setGeocodeStatus(`📍 Locating extra pins… ${done}/${needsGeocode}`);
+      try {
+        const result = await geocodeAddress(`${sale.address}, ${sale.cityLabel}`);
+        if (result) {
+          placeMarker(sale, result);
+          updateSaleState(sale.id, { lat: result.lat, lng: result.lng });
+        }
+      } catch (e) {
+        console.warn("extra pin geocode failed for", sale.address, e);
+      }
+      done++;
+      await new Promise(r => setTimeout(r, GEOCODE_DELAY_MS));
+    }
+    setGeocodeStatus("");
+  }
+
+  // ============================================================
+  // INIT
+  // ============================================================
+  let map;
+
+  async function init() {
+    loadState();
+
+    map = L.map("map").setView(MAP_CENTER, MAP_ZOOM);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+      maxZoom: 19,
+    }).addTo(map);
+
+    const sales = await fetch(DATA_URL).then(r => r.json());
+    for (const sale of sales) salesById[sale.id] = sale;
+
+    for (const p of EXTRA_PINS) {
+      salesById[p.id] = {
+        ...p,
+        isExtra: true,
+        text: `${p.description}\n\nCategories: ${p.categories.join(", ")}`,
+      };
+    }
+
+    for (const url of EXTRA_PIN_DATA_URLS) {
+      const extras = await fetch(url).then(r => r.json());
+      for (const p of extras) {
+        salesById[p.id] = {
+          ...p,
+          isExtra: true,
+          text: p.description || "",
+        };
+      }
+    }
+
+    const legendRows = [
+      ...STAR_LEVELS.map(l => ({ color: l.color, text: `${"★".repeat(l.stars)} ${l.label}` })),
+      { color: DEFAULT_PIN.color, text: "Not yet rated, no item list" },
+      { color: DEFAULT_PIN.color, text: "Not yet rated, has item list", border: HAS_TEXT_BORDER },
+      { color: DEFAULT_PIN.color, text: "Visited", border: VISITED_BORDER },
+      { color: INFO_PIN.color,    text: "Info center" },
+      { color: EXTRA_PIN.color,   text: "Found separately" },
+      { color: REMOVED_PIN.color, text: "Removed" },
+    ];
+    document.getElementById("legend").innerHTML = legendRows
+      .map(r => {
+        const border = r.border || DEFAULT_BORDER;
+        return `<div class="legend-row">
+                  <div class="legend-dot" style="background:${r.color};border:${border}"></div>
+                  <span>${esc(r.text)}</span>
+                </div>`;
+      })
+      .join("");
+
+    // Every Northgate listing already has lat/lng from the sign-up sheet,
+    // so all of those markers can be placed immediately.
+    const markerList = [];
+    for (const sale of Object.values(salesById)) {
+      if (sale.isExtra || sale.lat == null || sale.lng == null) continue;
+      placeMarker(sale, { lat: sale.lat, lng: sale.lng });
+      markerList.push(markers[sale.id]);
+    }
+
+    applyFilters();
+
+    // Fit the map to the Northgate markers first, so extra pins (placed
+    // below, possibly after a geocode round-trip) never shift the default view.
+    if (markerList.length) {
+      const group = L.featureGroup(markerList);
+      map.fitBounds(group.getBounds().pad(0.1));
+    }
+
+    await geocodeExtraPins();
+  }
+
+  init().catch(err => {
+    document.body.innerHTML = `<p style="padding:20px;color:red">
+      Failed to load sale data: ${err.message}<br>
+      Make sure <code>garage_sales/northgate_2026_addresses.json</code> exists.
+    </p>`;
+  });
+  </script>
+</body>
+</html>
