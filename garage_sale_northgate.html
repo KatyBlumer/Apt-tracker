@@ -123,6 +123,7 @@
     }
     .pin:hover { transform: scale(1.25); }
     .pin.info-center { font-size: 9px; }
+    .pin.extra-pin { font-size: 12px; }
 
     /* ============================================================
        Popup
@@ -143,6 +144,10 @@
       background: #f9fafb; border: 1px solid #e5e7eb;
       border-radius: 6px; padding: 6px 8px;
     }
+
+    .popup-cats { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+    .popup-cat { padding: 2px 8px; background: #ede9fe; color: #5b21b6; border-radius: 10px; font-size: 11px; }
+    .popup-tip { font-size: 11px; color: #6b7280; font-style: italic; margin: 6px 0; }
 
     /* Notes section — yellow-tinted */
     .popup-notes-section {
@@ -282,9 +287,25 @@
   const DEFAULT_PIN      = { color: "#3b82f6", size: 12 };
   const REMOVED_PIN      = { color: "#9ca3af", size: 8  };
   const INFO_PIN         = { color: "#059669", size: 16 };
+  const EXTRA_PIN        = { color: "#7c3aed", size: 24 }; // big purple = one-off, found separately
   const VISITED_BORDER   = "2px solid #15803d"; // dark green = visited
   const HAS_TEXT_BORDER  = "2px solid #111827"; // black = has an item description
   const DEFAULT_BORDER   = "2px solid rgba(255,255,255,0.85)";
+
+  // One-off sales found separately from the Northgate sign-up sheet —
+  // geocoded client-side on first visit (like everything else in this
+  // app respects Nominatim's fair-use policy), then cached in Firebase
+  // via the normal per-address state doc so it only happens once ever.
+  const EXTRA_PINS = [
+    {
+      id: "105-sutton-cir-danville",
+      address: "105 Sutton Cir",
+      cityLabel: "Danville, CA 94506",
+      description: "Homes in Meridian Place with a great mix of items, including furniture (roll top desk, leather sofas, storage end table), household items, decor, wall art, knick knacks, pet supplies (carrier bag, and more), tools, diving gear (snorkel and scuba), shoes, kitchen wares, baking pans, books, women's clothing, men's clothing, beach chairs, resin patio table and chairs, doggy door insert for full-size sliding glass door.",
+      categories: ["Home goods", "Kitchen Items or Cookware", "Sporting Goods", "Tools, Garden, or Hardware", "Furniture", "Art, Music or Books", "Clothing - Adult", "Pet Supplies"],
+      tip: "Bring a reusable bag to carry heavier items more easily and to protect fragile objects.",
+    },
+  ];
 
   // ============================================================
   // STATE — user ratings/notes, persisted to localStorage + Firebase
@@ -320,6 +341,7 @@
       saveState();
       for (const id of Object.keys(markers)) refreshMarker(id);
       if (activeSaleId) refreshPopup(activeSaleId);
+      placeReadyExtraPins();
     });
   }
 
@@ -380,6 +402,7 @@
     const sale = salesById[id];
     if (s.removed) return REMOVED_PIN;
     if (sale && sale.infoCenter) return INFO_PIN;
+    if (sale && sale.isExtra) return EXTRA_PIN;
     const starLevel = STAR_LEVELS.find(l => l.stars === s.stars);
     if (starLevel) return starLevel;
     return DEFAULT_PIN;
@@ -390,13 +413,15 @@
     const s      = getSaleState(id);
     const sale   = salesById[id];
     let label = (!s.removed && s.stars > 0) ? "★".repeat(s.stars) : "";
+    if (!s.removed && sale && sale.isExtra) label = "📍";
     if (!s.removed && s.visited) label = "✕";
     if (!s.removed && sale && sale.infoCenter) label = "i";
     let border = DEFAULT_BORDER;
     if (!s.removed && sale && sale.text) border = HAS_TEXT_BORDER;
     if (!s.removed && s.visited) border = VISITED_BORDER;
+    const pinClass = sale && sale.infoCenter ? " info-center" : sale && sale.isExtra ? " extra-pin" : "";
     return L.divIcon({
-      html: `<div class="pin${sale && sale.infoCenter ? " info-center" : ""}" style="width:${size}px;height:${size}px;background:${color};border:${border}">${label}</div>`,
+      html: `<div class="pin${pinClass}" style="width:${size}px;height:${size}px;background:${color};border:${border}">${label}</div>`,
       className:  "",
       iconSize:   [size, size],
       iconAnchor: [size / 2, size / 2],
@@ -434,11 +459,22 @@
       ? `<button class="btn btn-visited current" onclick="window.setSaleVisited('${sale.id}', false)">✕ Visited</button>`
       : `<button class="btn btn-neutral" onclick="window.setSaleVisited('${sale.id}', true)">Mark visited</button>`;
 
+    const bodyHtml = sale.isExtra
+      ? `
+        <div class="popup-info-badge" style="background:#ede9fe;color:#5b21b6;">📍 ${esc(sale.cityLabel)} · found separately</div>
+        <div class="popup-items">${esc(sale.description)}</div>
+        <div class="popup-cats">${sale.categories.map(c => `<span class="popup-cat">${esc(c)}</span>`).join("")}</div>
+        ${sale.tip ? `<div class="popup-tip">💡 ${esc(sale.tip)}</div>` : ""}
+      `
+      : `
+        ${sale.infoCenter ? `<div class="popup-info-badge">ℹ️ Info Center</div>` : ""}
+        ${sale.text ? `<div class="popup-items">${formatItemText(sale.text)}</div>` : ""}
+      `;
+
     return `
       <div class="sale-popup">
         <div class="popup-address">${esc(sale.address)}</div>
-        ${sale.infoCenter ? `<div class="popup-info-badge">ℹ️ Info Center</div>` : ""}
-        ${sale.text ? `<div class="popup-items">${formatItemText(sale.text)}</div>` : ""}
+        ${bodyHtml}
 
         <div class="popup-notes-section">
           <div class="popup-section-label">My notes</div>
@@ -531,6 +567,68 @@
   }
 
   // ============================================================
+  // MARKER PLACEMENT
+  // ============================================================
+  function placeMarker(sale, latlng) {
+    if (markers[sale.id]) return;
+    const marker = L.marker([latlng.lat, latlng.lng], {
+      icon:  makeIcon(sale.id),
+      title: sale.address,
+    });
+    marker.bindPopup(() => makePopupContent(sale), { maxWidth: 320, minWidth: 240 });
+    marker.on("popupopen",  () => { activeSaleId = sale.id; });
+    marker.on("popupclose", () => { if (activeSaleId === sale.id) activeSaleId = null; });
+    markers[sale.id] = marker;
+    if (passesFilter(sale)) marker.addTo(map);
+  }
+
+  // ============================================================
+  // EXTRA PINS — one-off sales found separately. Geocoded client-side
+  // (in the visitor's browser) since it's just 1-2 addresses; the
+  // result is cached forever in the same per-address Firebase state
+  // doc used for stars/notes, so it only happens once ever.
+  // ============================================================
+  async function geocodeAddress(address) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+    const res = await fetch(url, { headers: { "Accept": "application/json" } });
+    const data = await res.json();
+    if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    return null;
+  }
+
+  // Places any extra pin that already has a lat/lng in `state` (e.g. just
+  // arrived via the Firestore subscription) but doesn't have a marker yet.
+  function placeReadyExtraPins() {
+    for (const sale of Object.values(salesById)) {
+      if (!sale.isExtra || markers[sale.id]) continue;
+      const s = state[sale.id];
+      if (s && s.lat != null && s.lng != null) {
+        placeMarker(sale, { lat: s.lat, lng: s.lng });
+      }
+    }
+  }
+
+  async function geocodeExtraPins() {
+    for (const sale of Object.values(salesById)) {
+      if (!sale.isExtra || markers[sale.id]) continue;
+      const cached = state[sale.id];
+      if (cached && cached.lat != null && cached.lng != null) {
+        placeMarker(sale, { lat: cached.lat, lng: cached.lng });
+        continue;
+      }
+      try {
+        const result = await geocodeAddress(`${sale.address}, ${sale.cityLabel}`);
+        if (result) {
+          placeMarker(sale, result);
+          updateSaleState(sale.id, { lat: result.lat, lng: result.lng });
+        }
+      } catch (e) {
+        console.warn("extra pin geocode failed for", sale.address, e);
+      }
+    }
+  }
+
+  // ============================================================
   // INIT
   // ============================================================
   let map;
@@ -547,12 +645,21 @@
     const sales = await fetch(DATA_URL).then(r => r.json());
     for (const sale of sales) salesById[sale.id] = sale;
 
+    for (const p of EXTRA_PINS) {
+      salesById[p.id] = {
+        ...p,
+        isExtra: true,
+        text: `${p.description}\n\nCategories: ${p.categories.join(", ")}`,
+      };
+    }
+
     const legendRows = [
       ...STAR_LEVELS.map(l => ({ color: l.color, text: `${"★".repeat(l.stars)} ${l.label}` })),
       { color: DEFAULT_PIN.color, text: "Not yet rated, no item list" },
       { color: DEFAULT_PIN.color, text: "Not yet rated, has item list", border: HAS_TEXT_BORDER },
       { color: DEFAULT_PIN.color, text: "Visited", border: VISITED_BORDER },
       { color: INFO_PIN.color,    text: "Info center" },
+      { color: EXTRA_PIN.color,   text: "Found separately" },
       { color: REMOVED_PIN.color, text: "Removed" },
     ];
     document.getElementById("legend").innerHTML = legendRows
@@ -565,28 +672,25 @@
       })
       .join("");
 
-    // Every listing already has lat/lng from the sign-up sheet, so all
-    // markers can be placed immediately — no runtime geocoding needed.
+    // Every Northgate listing already has lat/lng from the sign-up sheet,
+    // so all of those markers can be placed immediately.
     const markerList = [];
     for (const sale of Object.values(salesById)) {
-      if (sale.lat == null || sale.lng == null) continue;
-      const marker = L.marker([sale.lat, sale.lng], {
-        icon:  makeIcon(sale.id),
-        title: sale.address,
-      });
-      marker.bindPopup(() => makePopupContent(sale), { maxWidth: 320, minWidth: 240 });
-      marker.on("popupopen",  () => { activeSaleId = sale.id; });
-      marker.on("popupclose", () => { if (activeSaleId === sale.id) activeSaleId = null; });
-      markers[sale.id] = marker;
-      markerList.push(marker);
+      if (sale.isExtra || sale.lat == null || sale.lng == null) continue;
+      placeMarker(sale, { lat: sale.lat, lng: sale.lng });
+      markerList.push(markers[sale.id]);
     }
 
     applyFilters();
 
+    // Fit the map to the Northgate markers first, so extra pins (placed
+    // below, possibly after a geocode round-trip) never shift the default view.
     if (markerList.length) {
       const group = L.featureGroup(markerList);
       map.fitBounds(group.getBounds().pad(0.1));
     }
+
+    await geocodeExtraPins();
   }
 
   init().catch(err => {
