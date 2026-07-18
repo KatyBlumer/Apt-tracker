@@ -104,6 +104,18 @@
     .ctrl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .ctrl-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 
+    #geocode-status {
+      font-size: 11px;
+      color: #92400e;
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+      display: none;
+    }
+    #geocode-status.active { display: block; }
+
     /* ============================================================
        Pins
     ============================================================ */
@@ -210,6 +222,8 @@
         event. Last-minute additions/cancellations are expected — neither Torrey Team nor Compass benefit financially from this event.
       </div>
 
+      <div id="geocode-status"></div>
+
       <div class="ctrl-row">
         <input type="text" id="search-text" placeholder="Search items (e.g. tools, vinyl)…" oninput="onSearchChange()"
                style="width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:5px 7px;font-size:12px;font-family:inherit">
@@ -287,7 +301,8 @@
   const DEFAULT_PIN      = { color: "#3b82f6", size: 12 };
   const REMOVED_PIN      = { color: "#9ca3af", size: 8  };
   const INFO_PIN         = { color: "#059669", size: 16 };
-  const EXTRA_PIN        = { color: "#7c3aed", size: 24 }; // big purple = one-off, found separately
+  const EXTRA_PIN        = { color: "#7c3aed", size: 26 }; // big purple = found separately, not in the sign-up sheet
+  const GEOCODE_DELAY_MS = 1100; // Nominatim fair-use: max 1 req/sec
   const VISITED_BORDER   = "2px solid #15803d"; // dark green = visited
   const HAS_TEXT_BORDER  = "2px solid #111827"; // black = has an item description
   const DEFAULT_BORDER   = "2px solid rgba(255,255,255,0.85)";
@@ -305,6 +320,12 @@
       categories: ["Home goods", "Kitchen Items or Cookware", "Sporting Goods", "Tools, Garden, or Hardware", "Furniture", "Art, Music or Books", "Clothing - Adult", "Pet Supplies"],
       tip: "Bring a reusable bag to carry heavier items more easily and to protect fragile objects.",
     },
+  ];
+
+  // Bigger found-separately sale groups (their own numbered address list),
+  // loaded from a JSON file the same shape as EXTRA_PINS entries above.
+  const EXTRA_PIN_DATA_URLS = [
+    "garage_sales/danville_chadbourne_addresses.json",
   ];
 
   // ============================================================
@@ -413,7 +434,7 @@
     const s      = getSaleState(id);
     const sale   = salesById[id];
     let label = (!s.removed && s.stars > 0) ? "★".repeat(s.stars) : "";
-    if (!s.removed && sale && sale.isExtra) label = "📍";
+    if (!s.removed && sale && sale.isExtra) label = sale.num != null ? String(sale.num) : "📍";
     if (!s.removed && s.visited) label = "✕";
     if (!s.removed && sale && sale.infoCenter) label = "i";
     let border = DEFAULT_BORDER;
@@ -461,9 +482,11 @@
 
     const bodyHtml = sale.isExtra
       ? `
-        <div class="popup-info-badge" style="background:#ede9fe;color:#5b21b6;">📍 ${esc(sale.cityLabel)} · found separately</div>
-        <div class="popup-items">${esc(sale.description)}</div>
-        <div class="popup-cats">${sale.categories.map(c => `<span class="popup-cat">${esc(c)}</span>`).join("")}</div>
+        <div class="popup-info-badge" style="background:#ede9fe;color:#5b21b6;">
+          📍 ${esc(sale.cityLabel)}${sale.num != null ? ` · House #${sale.num}` : ""} · found separately
+        </div>
+        ${sale.description ? `<div class="popup-items">${esc(sale.description)}</div>` : ""}
+        ${sale.categories && sale.categories.length ? `<div class="popup-cats">${sale.categories.map(c => `<span class="popup-cat">${esc(c)}</span>`).join("")}</div>` : ""}
         ${sale.tip ? `<div class="popup-tip">💡 ${esc(sale.tip)}</div>` : ""}
       `
       : `
@@ -583,10 +606,11 @@
   }
 
   // ============================================================
-  // EXTRA PINS — one-off sales found separately. Geocoded client-side
-  // (in the visitor's browser) since it's just 1-2 addresses; the
-  // result is cached forever in the same per-address Firebase state
-  // doc used for stars/notes, so it only happens once ever.
+  // EXTRA PINS — sales found separately, outside the Northgate sheet.
+  // Geocoded client-side (in the visitor's browser, rate-limited to
+  // respect Nominatim's fair-use policy) since we don't have lat/lng
+  // for these; each result is cached forever in the same per-address
+  // Firebase state doc used for stars/notes, so it's a one-time cost.
   // ============================================================
   async function geocodeAddress(address) {
     const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
@@ -608,14 +632,31 @@
     }
   }
 
+  function setGeocodeStatus(text) {
+    const el = document.getElementById("geocode-status");
+    if (!el) return;
+    if (!text) { el.classList.remove("active"); el.textContent = ""; return; }
+    el.classList.add("active");
+    el.textContent = text;
+  }
+
   async function geocodeExtraPins() {
-    for (const sale of Object.values(salesById)) {
-      if (!sale.isExtra || markers[sale.id]) continue;
+    const todo = Object.values(salesById).filter(s => s.isExtra && !markers[s.id]);
+    let needsGeocode = 0;
+    for (const sale of todo) {
       const cached = state[sale.id];
       if (cached && cached.lat != null && cached.lng != null) {
         placeMarker(sale, { lat: cached.lat, lng: cached.lng });
-        continue;
+      } else {
+        needsGeocode++;
       }
+    }
+    if (needsGeocode === 0) return;
+
+    let done = 0;
+    for (const sale of todo) {
+      if (markers[sale.id]) continue; // already placed from cache above
+      setGeocodeStatus(`📍 Locating extra pins… ${done}/${needsGeocode}`);
       try {
         const result = await geocodeAddress(`${sale.address}, ${sale.cityLabel}`);
         if (result) {
@@ -625,7 +666,10 @@
       } catch (e) {
         console.warn("extra pin geocode failed for", sale.address, e);
       }
+      done++;
+      await new Promise(r => setTimeout(r, GEOCODE_DELAY_MS));
     }
+    setGeocodeStatus("");
   }
 
   // ============================================================
@@ -651,6 +695,17 @@
         isExtra: true,
         text: `${p.description}\n\nCategories: ${p.categories.join(", ")}`,
       };
+    }
+
+    for (const url of EXTRA_PIN_DATA_URLS) {
+      const extras = await fetch(url).then(r => r.json());
+      for (const p of extras) {
+        salesById[p.id] = {
+          ...p,
+          isExtra: true,
+          text: p.description || "",
+        };
+      }
     }
 
     const legendRows = [
