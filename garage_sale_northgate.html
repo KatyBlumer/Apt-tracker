@@ -180,6 +180,11 @@
       </div>
 
       <div class="ctrl-row">
+        <input type="text" id="search-text" placeholder="Search items (e.g. tools, vinyl)…" oninput="onSearchChange()"
+               style="width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:5px 7px;font-size:12px;font-family:inherit">
+      </div>
+
+      <div class="ctrl-row">
         <label>
           <input type="checkbox" id="show-removed" onchange="onShowRemovedChange()">
           Show removed
@@ -307,11 +312,16 @@
   // ============================================================
   let showRemoved = false;
   let notesOnly   = false;
+  let searchQuery = "";
 
   function passesFilter(sale) {
     const s = getSaleState(sale.id);
     if (s.removed && !showRemoved) return false;
     if (notesOnly && !(s.notes && s.notes.trim())) return false;
+    if (searchQuery) {
+      const haystack = `${sale.address} ${sale.text || ""}`.toLowerCase();
+      if (!haystack.includes(searchQuery)) return false;
+    }
     return true;
   }
 
@@ -332,6 +342,11 @@
 
   function onNotesOnlyChange() {
     notesOnly = document.getElementById("notes-only").checked;
+    applyFilters();
+  }
+
+  function onSearchChange() {
+    searchQuery = document.getElementById("search-text").value.trim().toLowerCase();
     applyFilters();
   }
 
@@ -455,6 +470,7 @@
 
   window.onShowRemovedChange = onShowRemovedChange;
   window.onNotesOnlyChange   = onNotesOnlyChange;
+  window.onSearchChange      = onSearchChange;
 
   window.clearAllStars = function() {
     if (!confirm("Clear all star ratings?")) return;
