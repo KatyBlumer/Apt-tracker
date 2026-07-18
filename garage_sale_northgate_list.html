@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Northgate Garage Sale — List</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; color: #111827; background: #f9fafb; }
+
+    #header {
+      position: sticky; top: 0; z-index: 10;
+      background: #1e3a5f; color: white;
+      padding: 10px 12px;
+    }
+    #header-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    #header h1 { font-size: 15px; font-weight: 700; margin: 0; }
+    #header a.map-link {
+      color: white; text-decoration: none; font-size: 12px; font-weight: 600;
+      background: rgba(255,255,255,0.15); padding: 5px 10px; border-radius: 6px;
+      white-space: nowrap;
+    }
+    #header a.map-link:hover { background: rgba(255,255,255,0.25); }
+
+    #controls { padding: 10px 12px 4px; background: white; border-bottom: 1px solid #e5e7eb; }
+    #search-text {
+      width: 100%; border: 1px solid #cbd5e1; border-radius: 6px;
+      padding: 7px 9px; font-size: 13px; font-family: inherit; margin-bottom: 8px;
+    }
+    .ctrl-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; font-size: 12px; }
+    .ctrl-row label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+
+    #list-container { padding-bottom: 40px; }
+
+    .section-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px; background: #eff6ff; border-top: 1px solid #bfdbfe; border-bottom: 1px solid #bfdbfe;
+      cursor: pointer; user-select: none; font-weight: 700; font-size: 13px; color: #1e40af;
+      position: sticky; top: 78px; z-index: 5;
+    }
+    .section-chevron { background: none; border: none; color: #1e40af; font-size: 12px; cursor: pointer; padding: 0; }
+    .section-body.hidden { display: none; }
+    .section-empty { padding: 16px 12px; color: #9ca3af; font-size: 12px; font-style: italic; }
+
+    .list-row {
+      display: grid;
+      grid-template-columns: 74px 1fr;
+      gap: 3px 10px;
+      padding: 8px 12px;
+      border-bottom: 1px solid #e5e7eb;
+      background: white;
+    }
+    .list-row.removed { opacity: 0.55; }
+
+    .row-address { font-size: 10px; color: #6b7280; line-height: 1.35; word-break: break-word; }
+    .row-num { font-weight: 700; color: #5b21b6; }
+    .row-tag {
+      display: inline-block; font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.03em; color: #6b7280;
+    }
+    .row-stars { color: #f59e0b; font-size: 11px; display: block; margin-top: 2px; }
+
+    .row-text { font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
+    .row-text strong { color: #111827; }
+    .row-empty { color: #9ca3af; font-style: italic; font-size: 12px; }
+
+    .row-actions { grid-column: 1 / -1; display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+
+    .btn {
+      padding: 4px 8px; border-radius: 5px; border: 1.5px solid;
+      cursor: pointer; font-size: 11px; font-weight: 600;
+      font-family: inherit; transition: opacity 0.12s; background: white;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn.current { box-shadow: 0 0 0 2px rgba(0,0,0,0.25); }
+
+    .btn-star1   { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+    .btn-star2   { background: #ffedd5; border-color: #f97316; color: #7c2d12; }
+    .btn-star3   { background: #fee2e2; border-color: #ef4444; color: #7f1d1d; }
+    .btn-remove  { background: #f9fafb; border-color: #6b7280; color: #374151; }
+    .btn-restore { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <div id="header-row">
+      <h1>🏷️ Northgate Garage Sale — List</h1>
+      <a class="map-link" href="garage_sale_northgate.html">🗺️ Map view</a>
+    </div>
+  </div>
+
+  <div id="controls">
+    <input type="text" id="search-text" placeholder="Search items (e.g. tools, vinyl)…" oninput="onControlsChange()">
+    <div class="ctrl-row">
+      <label><input type="checkbox" id="sort-stars" onchange="onControlsChange()"> Sort by rating</label>
+      <label><input type="checkbox" id="show-removed" onchange="onControlsChange()"> Show removed</label>
+    </div>
+  </div>
+
+  <div id="list-container"></div>
+
+  <!-- Firebase: initializes window.GS_FB and fires "gs-fb-ready" -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, onSnapshot }
+      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const db = getFirestore(initializeApp({
+      apiKey:            "AIzaSyBQE_jALldqxkmkk01oLwyfiDAlj5HnMS0",
+      authDomain:        "apartment-hunt-2026.firebaseapp.com",
+      projectId:         "apartment-hunt-2026",
+      storageBucket:     "apartment-hunt-2026.firebasestorage.app",
+      messagingSenderId: "636926285570",
+      appId:             "1:636926285570:web:07bb863c19a7f8a4c5541b",
+    }));
+
+    const STATE_COLL = collection(db, "garage_sale_northgate", "2026", "entries");
+
+    window.GS_FB = {
+      subscribe(cb) {
+        return onSnapshot(STATE_COLL, snap => {
+          const entries = {};
+          snap.forEach(d => { entries[d.id] = d.data(); });
+          cb(entries);
+        }, err => console.error("Firestore error:", err));
+      },
+      async save(id, data) {
+        await setDoc(doc(STATE_COLL, id), data, { merge: true });
+      },
+    };
+    window.dispatchEvent(new Event("gs-fb-ready"));
+  </script>
+
+  <script>
+  "use strict";
+
+  // ============================================================
+  // CONFIG — mirrors garage_sale_northgate.html's data sources so
+  // ratings/removals stay in sync between the map and list views.
+  // ============================================================
+  const DATA_URL  = "garage_sales/northgate_2026_addresses.json";
+  const STATE_KEY = "gs_northgate_2026";
+
+  const STAR_LEVELS = [
+    { stars: 1, label: "Good",     btnClass: "btn-star1" },
+    { stars: 2, label: "Great",    btnClass: "btn-star2" },
+    { stars: 3, label: "Must-see", btnClass: "btn-star3" },
+  ];
+
+  const EXTRA_PINS = [
+    {
+      id: "105-sutton-cir-danville",
+      address: "105 Sutton Cir",
+      cityLabel: "Danville, CA 94506",
+      description: "Homes in Meridian Place with a great mix of items, including furniture (roll top desk, leather sofas, storage end table), household items, decor, wall art, knick knacks, pet supplies (carrier bag, and more), tools, diving gear (snorkel and scuba), shoes, kitchen wares, baking pans, books, women's clothing, men's clothing, beach chairs, resin patio table and chairs, doggy door insert for full-size sliding glass door.",
+      categories: ["Home goods", "Kitchen Items or Cookware", "Sporting Goods", "Tools, Garden, or Hardware", "Furniture", "Art, Music or Books", "Clothing - Adult", "Pet Supplies"],
+      tip: "Bring a reusable bag to carry heavier items more easily and to protect fragile objects.",
+    },
+  ];
+
+  const EXTRA_PIN_DATA_URLS = [
+    "garage_sales/danville_chadbourne_addresses.json",
+  ];
+
+  // ============================================================
+  // STATE — user ratings/notes, persisted to localStorage + Firebase
+  // ============================================================
+  let state = {};
+
+  function loadState() {
+    try { state = JSON.parse(localStorage.getItem(STATE_KEY) || "{}"); }
+    catch { state = {}; }
+  }
+  function saveState() {
+    localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  }
+  function getSaleState(id) {
+    return state[id] || { stars: 0, removed: false, visited: false, notes: "" };
+  }
+  function updateSaleState(id, patch) {
+    state[id] = { ...getSaleState(id), ...patch };
+    saveState();
+    if (window.GS_FB) GS_FB.save(id, getSaleState(id));
+    renderAll();
+  }
+
+  function initFirebase() {
+    GS_FB.subscribe(entries => {
+      for (const [id, data] of Object.entries(entries)) state[id] = data;
+      saveState();
+      renderAll();
+    });
+  }
+  window.addEventListener("gs-fb-ready", initFirebase);
+  if (window.GS_FB) initFirebase();
+
+  window.setSaleStars   = (id, n)   => updateSaleState(id, { stars: n });
+  window.setSaleRemoved = (id, val) => updateSaleState(id, { removed: val });
+
+  // ============================================================
+  // UTILITY
+  // ============================================================
+  function esc(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  // Bolds the "Category: " prefix on each line of an item list.
+  function formatItemText(text) {
+    return text.split("\n").map(line => {
+      const idx = line.indexOf(": ");
+      if (idx === -1) return esc(line);
+      const header = line.slice(0, idx);
+      const rest   = line.slice(idx + 2);
+      return `<strong>${esc(header)}:</strong> ${esc(rest)}`;
+    }).join("\n");
+  }
+
+  // ============================================================
+  // DATA
+  // ============================================================
+  const sections = [
+    { id: "walnut-creek", label: "Walnut Creek (Northgate)", items: [], open: true },
+    { id: "danville",     label: "Danville",                 items: [], open: false },
+  ];
+
+  async function loadData() {
+    const sales = await fetch(DATA_URL).then(r => r.json());
+    sections[0].items = sales;
+
+    const extras = EXTRA_PINS.map(p => ({
+      ...p,
+      isExtra: true,
+      text: `${p.description}\n\nCategories: ${p.categories.join(", ")}`,
+    }));
+    for (const url of EXTRA_PIN_DATA_URLS) {
+      const items = await fetch(url).then(r => r.json());
+      for (const p of items) {
+        extras.push({ ...p, isExtra: true, text: p.description || "" });
+      }
+    }
+    sections[1].items = extras;
+  }
+
+  // ============================================================
+  // FILTER / SORT
+  // ============================================================
+  function getFilteredSorted(items) {
+    const searchQuery = document.getElementById("search-text").value.trim().toLowerCase();
+    const showRemoved = document.getElementById("show-removed").checked;
+    const sortByStars = document.getElementById("sort-stars").checked;
+
+    let filtered = items.filter(sale => {
+      const s = getSaleState(sale.id);
+      if (s.removed && !showRemoved) return false;
+      if (searchQuery) {
+        const haystack = `${sale.address} ${sale.text || ""}`.toLowerCase();
+        if (!haystack.includes(searchQuery)) return false;
+      }
+      return true;
+    });
+
+    if (sortByStars) {
+      filtered = [...filtered].sort((a, b) => getSaleState(b.id).stars - getSaleState(a.id).stars);
+    }
+    return filtered;
+  }
+
+  // ============================================================
+  // RENDERING
+  // ============================================================
+  function renderRow(sale) {
+    const s = getSaleState(sale.id);
+
+    const numBadge = sale.isExtra && sale.num != null ? `<span class="row-num">#${sale.num}</span> ` : "";
+    const tag = sale.isExtra ? `<span class="row-tag">found separately</span>`
+              : sale.infoCenter ? `<span class="row-tag">info center</span>` : "";
+    const starsLine = s.stars > 0 ? `<span class="row-stars">${"★".repeat(s.stars)}</span>` : "";
+
+    const starBtns = STAR_LEVELS.map(l => `
+      <button class="btn ${l.btnClass}${s.stars === l.stars ? " current" : ""}"
+              onclick="window.setSaleStars('${sale.id}', ${s.stars === l.stars ? 0 : l.stars})">
+        ${"★".repeat(l.stars)} ${esc(l.label)}
+      </button>`).join("");
+
+    const removeBtn = s.removed
+      ? `<button class="btn btn-restore" onclick="window.setSaleRemoved('${sale.id}', false)">↩ Restore</button>`
+      : `<button class="btn btn-remove"  onclick="window.setSaleRemoved('${sale.id}', true)">✕ Remove</button>`;
+
+    return `
+      <div class="list-row${s.removed ? " removed" : ""}">
+        <div class="row-address">${numBadge}${esc(sale.address)}${tag ? `<br>${tag}` : ""}${starsLine}</div>
+        <div class="row-text">${sale.text ? formatItemText(sale.text) : `<span class="row-empty">No item list yet</span>`}</div>
+        <div class="row-actions">${starBtns}${removeBtn}</div>
+      </div>`;
+  }
+
+  function renderSection(section) {
+    const filtered = getFilteredSorted(section.items);
+    const countLabel = filtered.length === section.items.length
+      ? `${section.items.length}`
+      : `${filtered.length} of ${section.items.length}`;
+
+    return `
+      <div class="section-toggle" onclick="window.toggleSection('${section.id}')">
+        <span>${esc(section.label)} (${countLabel})</span>
+        <button class="section-chevron">${section.open ? "▲" : "▼"}</button>
+      </div>
+      <div class="section-body${section.open ? "" : " hidden"}">
+        ${filtered.length ? filtered.map(renderRow).join("") : `<div class="section-empty">No matches</div>`}
+      </div>`;
+  }
+
+  function renderAll() {
+    document.getElementById("list-container").innerHTML = sections.map(renderSection).join("");
+  }
+
+  window.toggleSection = function(id) {
+    const section = sections.find(s => s.id === id);
+    section.open = !section.open;
+    renderAll();
+  };
+
+  window.onControlsChange = renderAll;
+
+  // ============================================================
+  // INIT
+  // ============================================================
+  async function init() {
+    loadState();
+    await loadData();
+    renderAll();
+  }
+
+  init().catch(err => {
+    document.getElementById("list-container").innerHTML = `<p style="padding:20px;color:red">
+      Failed to load sale data: ${err.message}
+    </p>`;
+  });
+  </script>
+</body>
+</html>

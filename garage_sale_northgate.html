@@ -42,8 +42,14 @@
       user-select: none;
     }
 
-    #controls-header h2 { font-size: 14px; font-weight: 700; margin: 0; }
+    #controls-header h2 { font-size: 14px; font-weight: 700; margin: 0; flex: 1; }
     #controls-toggle { background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 0; }
+    .list-link {
+      color: white; text-decoration: none; font-size: 11px; font-weight: 600;
+      background: rgba(255,255,255,0.15); padding: 4px 8px; border-radius: 5px;
+      white-space: nowrap; margin-right: 8px;
+    }
+    .list-link:hover { background: rgba(255,255,255,0.25); }
 
     #controls-body {
       overflow-y: auto;
@@ -204,6 +210,7 @@
   <div id="controls">
     <div id="controls-header" onclick="toggleControls()">
       <h2>🏷️ Northgate Garage Sale</h2>
+      <a href="garage_sale_northgate_list.html" class="list-link" onclick="event.stopPropagation()">📋 List</a>
       <button id="controls-toggle" aria-label="Collapse">▲</button>
     </div>
     <div id="controls-body">
@@ -275,7 +282,7 @@
         }, err => console.error("Firestore error:", err));
       },
       async save(id, data) {
-        await setDoc(doc(STATE_COLL, id), data);
+        await setDoc(doc(STATE_COLL, id), data, { merge: true });
       },
     };
     window.dispatchEvent(new Event("gs-fb-ready"));
