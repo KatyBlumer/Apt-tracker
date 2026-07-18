@@ -1,489 +1,732 @@
 [
   {
-    "id": "2172-angus-dr",
-    "address": "2172 Angus Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2107-asenath-ct",
-    "address": "2107 Asenath Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "741-autumn-dr",
-    "address": "741 Autumn Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "808-autumn-dr",
-    "address": "808 Autumn Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "864-autumn-drive",
-    "address": "864 Autumn Drive",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2010-belford-dr",
-    "address": "2010 Belford Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2426-belford-dr",
-    "address": "2426 Belford Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "136-bexley-pl",
-    "address": "136 Bexley Pl.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "450-blackstone-court",
-    "address": "450 Blackstone Court",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2226-blackstone-dr",
-    "address": "2226 Blackstone Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2518-casa-grande-ct",
-    "address": "2518 Casa Grande Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2233-cascade-dr",
-    "address": "2233 Cascade Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2418-cascade-dr",
-    "address": "2418 Cascade Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2515-cascade-dr",
-    "address": "2515 Cascade Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
     "id": "2327-cascade-dr",
     "address": "2327 Cascade Dr.",
-    "lat": null,
-    "lng": null,
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9140659,
+    "lng": -122.0218243,
+    "text": "",
     "infoCenter": true
   },
   {
     "id": "2406-cascade-drive",
     "address": "2406 Cascade Drive",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2681-cassandra-ct",
-    "address": "2681 Cassandra Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "783-cattail-ct",
-    "address": "783 Cattail Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2939-cedro-lane",
-    "address": "2939 Cedro Lane",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2548-chinook-dr",
-    "address": "2548 Chinook Dr",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2586-chinook-drive",
-    "address": "2586 Chinook Drive",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "1066-chippewa-court",
-    "address": "1066 chippewa court",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "364-clyde-dr",
-    "address": "364 Clyde Dr",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "111-clyde-dr",
-    "address": "111 Clyde Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2226-comistas-dr",
-    "address": "2226 Comistas Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "224-corte-de-la-reina",
-    "address": "224 Corte de la Reina",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "628-creekmore-ct",
-    "address": "628 Creekmore Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "3195-diablo-shadow-dr",
-    "address": "3195 Diablo Shadow Dr",
-    "lat": null,
-    "lng": null
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9144411,
+    "lng": -122.0226211,
+    "text": "Outdoor Patio: Table and Accents\nSporting Equipment/Exercise Equipment: Apparel & Footwear, Team Sports Equipment\nChildren's / Teen Clothing: Children's Clothing\nAdult Clothing: Women's Shoes, Men's Shoes, Men's Clothing, Women's Clothing"
   },
   {
     "id": "540-dover-dr",
     "address": "540 DOVER DR",
-    "lat": null,
-    "lng": null
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9165926,
+    "lng": -122.0238774,
+    "text": "Electronics/Camera: Entertainment Electronics: TVs, soundbars, stereo systems, video game consoles, and streaming devices\nIndoor Furniture: Bedroom, Home Office\nSporting Equipment/Exercise Equipment: Apparel & Footwear, Training & Fitness Equipment: weights, Treadmills, exercise bikes, mats, kettle bells\nBaby Equipment: Nursery and Sleeping, Feeding, Bathing and Grooming, Play and Activity\nToys/Games and Arts and Crafts: Language and Literacy, Role-Playing and Pretend Toys\nChildren's / Teen Clothing: Children's Clothing\nRecords/CDs: CDs\nSmall Kitchen Appliances/Housewares: Other"
   },
   {
-    "id": "519-dover-drive",
-    "address": "519 Dover Drive",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "188-dunblane-dr",
-    "address": "188 Dunblane Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "245-ebano-dr",
-    "address": "245 Ebano Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "3039-ebano-dr",
-    "address": "3039 Ebano Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "3107-ebano-dr",
-    "address": "3107 Ebano Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "3139-ebano-dr",
-    "address": "3139 Ebano Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "3030-ebano-drive",
-    "address": "3030 Ebano Drive",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2329-english-court",
-    "address": "2329 English Court",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2250-english-ct",
-    "address": "2250 English Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "3536-eris-ct",
-    "address": "3536 Eris Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2972-hurlstone-ct",
-    "address": "2972 Hurlstone Ct",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "418-kirby-ct",
-    "address": "418 Kirby Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "3175-kirby-ln",
-    "address": "3175 Kirby Ln.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "239-langlie-ct",
-    "address": "239 Langlie Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "207-las-lomas-way",
-    "address": "207 Las Lomas Way",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "277-las-lomas-way",
-    "address": "277 Las Lomas Way",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "409-las-lomas-way",
-    "address": "409 Las Lomas Way",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2345-lomond-ln",
-    "address": "2345 Lomond Ln",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2305-lomond-ln",
-    "address": "2305 Lomond Ln.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2427-lomond-ln",
-    "address": "2427 Lomond Ln.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "771-merrick-ct",
-    "address": "771 Merrick Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "48-mi-elana-ct",
-    "address": "48 Mi Elana Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "915-natchez-dr",
-    "address": "915 Natchez Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "851-northgate-rd",
-    "address": "851 Northgate Rd.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "925-pacific-ct",
-    "address": "925 Pacific Ct",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "406-pazzi-rd",
-    "address": "406 Pazzi Rd.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2764-pontiac-dr",
-    "address": "2764 Pontiac Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2330-quiet-place-dr",
-    "address": "2330 Quiet Place Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2622-quiet-place-dr",
-    "address": "2622 Quiet Place Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2672-quiet-place-dr",
-    "address": "2672 Quiet Place Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2315-rubicon-ct",
-    "address": "2315 Rubicon Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "2928-san-antonio-dr",
-    "address": "2928 San Antonio Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "1011-seneca-ct",
-    "address": "1011 Seneca Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "3617-shukla-ct",
-    "address": "3617 Shukla Ct.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "957-snyder-lane",
-    "address": "957 Snyder Lane",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "989-snyder-lane",
-    "address": "989 Snyder Lane",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "983-snyder-lane",
-    "address": "983 Snyder Lane",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "987-springfield-dr",
-    "address": "987 Springfield Dr.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "3064-stinson-cir",
-    "address": "3064 Stinson Cir.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "3185-stinson-cir",
-    "address": "3185 Stinson Cir.",
-    "lat": null,
-    "lng": null
-  },
-  {
-    "id": "880-stonehaven-dr",
-    "address": "880 Stonehaven Dr.",
-    "lat": null,
-    "lng": null
+    "id": "864-autumn-drive",
+    "address": "864 Autumn Drive",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9127207,
+    "lng": -122.0212604,
+    "text": "Indoor Furniture: Living Room\nAdult Clothing: Women's Shoes, Women's Clothing\nMusical Instruments/equipment: Musical Instruments\nRecords/CDs: Vinyl, CDs, Cassette\nMovies/DVDs etc.: DVDs\nJewelry and Accessories: Vintage Costume Jewelry, Sterling Silver and Gold, Beaded and Trendy, Accessories\nArt/Frames: Vintage and Ornate Frames, Folk Art, Project Frames, Art Supplies\nSmall Kitchen Appliances/Housewares: Specialty Gadgets\nBooks: Cookbooks"
   },
   {
     "id": "802-stonehaven-drive",
     "address": "802 Stonehaven Drive",
-    "lat": null,
-    "lng": null
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.91376027,
+    "lng": -122.0092543,
+    "text": "Electronics/Camera: Consumer Electronics: smart phones, laptops, computers etc\nIndoor Furniture: Living Room, Home Office, Lighting Fixtures: Lamps, LED, Overhead etc\nOutdoor Patio: Dining, Table and Accents\nSporting Equipment/Exercise Equipment: Stationary Bike\nBaby clothes: 3-9 months, 9-18 months\nToys/Games and Arts and Crafts: Other\nChildren's / Teen Clothing: Children's Clothing\nAdult Clothing: Men's Clothing, Women's Clothing\nRecords/CDs: CDs\nTools: Other\nGardening: Garden Tools, Pots, Plants, Other\nJewelry and Accessories: Vintage Costume Jewelry, Sterling Silver and Gold, Beaded and Trendy, Accessories, Other\nCoins: Wheat Pennies\nArt/Frames: Folk Art, Framed Prints and Posters, Art Supplies\nSmall Kitchen Appliances/Housewares: Other\nBooks: Self Help\nMiscellaneous Items: 3D printed items and equipment"
   },
   {
-    "id": "774-sutton-dr",
-    "address": "774 Sutton Dr.",
-    "lat": null,
-    "lng": null
+    "id": "2548-chinook-dr",
+    "address": "2548 Chinook Dr",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9084177,
+    "lng": -122.0190034,
+    "text": "Electronics/Camera: Computer Accessories: keyboards, mouse\nIndoor Furniture: Contemporary TV Console\nSporting Equipment/Exercise Equipment: Apparel & Footwear, Training & Fitness Equipment: weights, Treadmills, exercise bikes, mats, kettle bells, rowing machine,\nToys/Games and Arts and Crafts: Rubik cubes\nAdult Clothing: Men's Clothing, Women's Clothing XS and S,  shoes\nGardening: Pots\nJewelry and Accessories: Kendra Scott Open Frame Earrings - 2 sets, fashion jewelry, sunglasses, Kate Spade Purses\nSmall Kitchen Appliances/Housewares: Cooking and Air Frying\nBooks: Adult Romance, Adult Mystery and Thrillers, Children, Young Adult, Cookbooks, Self Help\nMedical Supplies: Crutches, Medical boot"
   },
   {
-    "id": "254-tamarisk-dr",
-    "address": "254 Tamarisk Dr.",
-    "lat": null,
-    "lng": null
+    "id": "2518-casa-grande-ct",
+    "address": "2518 Casa Grande Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.920621,
+    "lng": -122.0214281,
+    "text": "Electronics/Camera: MacAir 2012 Model Laptop (on factory setting) , Dell XPS Ultra Portable Compact Laptop13.4 in 10th generation Intel Core i7, Dell Inspiron 15 (15.6\"), Wacom Intuos 5 Size Medium graphic tablet,\nIndoor Furniture: Living Room\nSporting Equipment/Exercise Equipment: Tennis rackets - Babolat Racket x 6, Wilson Racket x 1, some Pickleball paddles, Stella McCartney Women's Nylon Athletic Pants (size S), New: men's pro Motion Brand Wetsuit top and bottom size XL, GSWarriors clothing, SF Giants Authentic Collection Performance Pull over Hoodie, fleece lining\nToys/Games and Arts and Crafts: Tiffany Vintage Playing Cards Double Decks\nChildren's / Teen Clothing: Children's Clothing\nAdult Clothing: New with Box Asics Mens Tennis Shoes, Gel Resolution size 9, New with Box: MBT Brand, Eronomic Recovery Sandal Women's size 5, New Kate Spade Black Suede High Heel shoes (size 4), Men's shoes sizes 9-9.5, Cole Haan Rockport, Berwick.  Men and Women's Clothing, Patagonia Men's Full Zip Up Jacket. Noble Grey\nTools: Makita Circular Saw: whole kit in a hard case- mint condition Model 5007MG, New with case: Makita Compact Palm Router Kit Model Trimmer RT 0700C\nJewelry and Accessories: FAO Schwartz Large Travel Boston Bag. New Oliver Thomas women's handbag - Shoulder/crossbody bag, Porter Yhoshida Co Highend brief case, Entro Brand Women's scarf, New Burberry's and Lanvin Men's Handkerchiefs (vintage), Gucci Vintagge Hand/Shoulder Bag (Antique),  New and used Maui Jim and Ray Ban Sunglasses,  New Salvagtore Ferragama Brand Travel Compact Mirror and folding photo frame, Men's italian  leather belts, Ray- Ban foldign Sunglasses (New with tag and case)\nCoins: Silver Coins\nArt/Frames: Framed Prints and Posters\nSmall Kitchen Appliances/Housewares: New in Box Vitamix12 cup Food Processor Whole Attachement Set (no bottom device), Mikimoto Desert Silverware set x 5,\nMedical Supplies: New with case: Ultra Compact Travel CPAP Machine\nMiscellaneous Items: New in box: Theragun. New in box: Myobuddy Muscle Relieve Device, New Swarovski crystal and pearl shell shaped ornament"
   },
   {
-    "id": "284-tamarisk-dr",
-    "address": "284 Tamarisk Dr.",
-    "lat": null,
-    "lng": null
+    "id": "519-dover-drive",
+    "address": "519 Dover Drive",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9185463,
+    "lng": -122.0256325,
+    "text": "Indoor Furniture: Bookcases, Armoires, Tables, Chairs, Poster beds\nSporting Equipment/Exercise Equipment: Red wing crocks,\nBaby Equipment: Bassinet, Swing, Rocker, Antique high chair, jumper\nBaby clothes: Newborn-3 months, 3-9 months, 9-18 months, Other\nToys/Games and Arts and Crafts: TOYS\nChildren's / Teen Clothing: Boys Clothing\nAdult Clothing: Women's Shoes, Men's Shoes, Men's Clothing, Women's Clothing\nRecords/CDs: Vinyl, CDs\nMovies/DVDs etc.: DVDs\nTools: Hand Tools, Power Tools\nGardening: Garden items, tomato cages\nArt/Frames: Vintage and Ornate Frames\nSmall Kitchen Appliances/Housewares: Pyrex bowls, kitchen items, mason jars, china sets\nBBQ/BBQ Accessories: Grills and Smokers\nBooks: Adult Mystery and Thrillers, Children\nPet/Dog Accessories/Crates etc.: Apparel, Crate\nBedding: Quilts"
+  },
+  {
+    "id": "925-pacific-ct",
+    "address": "925 Pacific Ct",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.910115,
+    "lng": -122.022982,
+    "text": "Electronics/Camera: Entertainment Electronics: TVs, soundbars, stereo systems, video game consoles, and streaming devices\nBaby Equipment: Nursery and Sleeping, Bathing and Grooming, Play and Activity\nBaby clothes: 3-9 months, 9-18 months, Other\nToys/Games and Arts and Crafts: Puzzles, Building and Construction Blocks, STEM and Scientific Kits, Language and Literacy, Role-Playing and Pretend Toys, Sensory Toys\nAdult Clothing: Women's Shoes, Men's Shoes, Men's Clothing, Women's Clothing\nTools: Hand Tools\nGardening: Pots, Plants"
+  },
+  {
+    "id": "2586-chinook-drive",
+    "address": "2586 Chinook Drive",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9079118,
+    "lng": -122.0187283,
+    "text": "Indoor Furniture: Dresser (walnut wood), Nightstand (walnut wood) Bookshelf table, Bedframe/head and foot boards\nBaby Equipment: Play and Activity\nToys/Games and Arts and Crafts: Building and Construction Blocks\nSmall Kitchen Appliances/Housewares: Housewares"
+  },
+  {
+    "id": "2345-lomond-ln",
+    "address": "2345 Lomond Ln",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9166653,
+    "lng": -122.0216644,
+    "text": "Electronics/Camera: Flat Screen TV, printer\nIndoor Furniture: Media Armoire -custom make (Pennsylvania barnwood)\nSporting Equipment/Exercise Equipment: Cooler (ice chest) on wheels\nToys/Games and Arts and Crafts: Poker Table\nGardening: Leaf Blower\nSmall Kitchen Appliances/Housewares: Mini refrigerator\nPet/Dog Accessories/Crates etc.: Collapsible/travel dog crate\nMiscellaneous Items: Knick-Knacks\nTravel: Luggage"
   },
   {
     "id": "226-via-monte",
     "address": "226 Via Monte",
-    "lat": null,
-    "lng": null
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9237676,
+    "lng": -122.0164132,
+    "text": "Electronics/Camera: Entertainment Electronics: TVs, soundbars, stereo systems, video game consoles, and streaming devices\nIndoor Furniture: Living Room, Bedroom, Dining, Home Office\nOutdoor Patio: Lounging and seating\nSporting Equipment/Exercise Equipment: Sporting goods, baseball/tennis\nToys/Games and Arts and Crafts: Puzzles, Building and Construction Blocks\nChildren's / Teen Clothing: Children's Clothing\nAdult Clothing: Men's Shoes, Men's Clothing, Women's Clothing\nRecords/CDs: Vinyl, CDs\nGardening: Plants\nSmall Kitchen Appliances/Housewares: Other\nBooks: Adult Mystery and Thrillers, Children, Cookbooks, Coffee Table/Art Books, History"
+  },
+  {
+    "id": "3195-diablo-shadow-dr",
+    "address": "3195 Diablo Shadow Dr",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9254118,
+    "lng": -122.0098018,
+    "text": "Sporting Equipment/Exercise Equipment: Apparel & Footwear, Individual Sport Equipment, Training & Fitness Equipment: weights, Treadmills, exercise bikes, mats, kettle bells\nBaby Equipment: Travel and Transportation, Bathing and Grooming, Play and Activity\nBaby clothes: 9-18 months, Other\nToys/Games and Arts and Crafts: Role-Playing and Pretend Toys, Sensory Toys\nChildren's / Teen Clothing: Children's Clothing\nAdult Clothing: Women's Shoes, Men's Clothing, Women's Clothing\nGardening: Other\nSmall Kitchen Appliances/Housewares: Specialty Gadgets, Other\nBooks: Adult Mystery and Thrillers, Adult Fantasy and Science Fiction, Children, Cookbooks, Coffee Table/Art Books, Biographies/Autobiographies, Self Help"
+  },
+  {
+    "id": "957-snyder-lane",
+    "address": "957 Snyder Lane",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9097135,
+    "lng": -122.0149054,
+    "text": "Electronics/Camera: JBL wedge monitors 12\", JBL 2-10 Main cabinets, Speaker Cables, Clic Gear Fold-up Cart, Patch Cable, Electro-Voice PSX 1000 Watt Mixer\nIndoor Furniture: Antique Bench, Bar Stools, Wood Room Dividers\nOutdoor Patio: Lawn Chairs, Outdoor Umbrella\nSporting Equipment/Exercise Equipment: Scotty Cameron Futura and Newport Golf Putters, Individual Scotty Cameron Putter Head Cover, Bicycle Repair Tools\nToys/Games and Arts and Crafts: Puzzles\nAdult Clothing: Men's Clothes\nMusical Instruments/equipment: Guitar amp road cases, Large Pedal board and Road Case, EY Practice/Record Cab, Guitar Cables\nRecords/CDs: Vinyl, CDs\nMovies/DVDs etc.: VHS, DVDs\nGardening: Plants\nJewelry and Accessories: Beaded and Trendy\nCoins: Foreign Currency\nSmall Kitchen Appliances/Housewares: Kitchen ware, Fitz & Floyd Dishes, wine glasses. Lots of household items, storage containers\nPet/Dog Accessories/Crates etc.: Pet Supplies\nModels/Collectibles/Trading Cards: Beanie Babies/Buddies"
+  },
+  {
+    "id": "364-clyde-dr",
+    "address": "364 Clyde Dr",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9184675,
+    "lng": -122.0233479,
+    "text": "Indoor Furniture: Secretary, Dining room table, China Cabinet, Bookshelf, Wine Table\nSporting Equipment/Exercise Equipment: Men's Basketball Shoes (Nike, Size 15), Baseball and Softball Equipment, BMX Bike, Men's small Specialized Bike\nRecords/CDs: Vinyl, CDs\nMovies/DVDs etc.: VHS\nSmall Kitchen Appliances/Housewares: Homegoods"
+  },
+  {
+    "id": "224-corte-de-la-reina",
+    "address": "224 Corte de la Reina",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9217869,
+    "lng": -122.0210703,
+    "text": "Indoor Furniture: Lighting Fixtures: Lamps, LED, Overhead etc\nSporting Equipment/Exercise Equipment: Outdoor  and Recreational Gear: Kayaking, rock climbing, skiing, snowboarding, camping\nBaby clothes: Other\nToys/Games and Arts and Crafts: Puzzles, Building and Construction Blocks, STEM and Scientific Kits, Language and Literacy, Role-Playing and Pretend Toys, Sensory Toys\nChildren's / Teen Clothing: Children's Clothing\nAdult Clothing: Women's Shoes, Men's Shoes, Men's Clothing, Women's Clothing\nRecords/CDs: CDs\nMovies/DVDs etc.: DVDs\nJewelry and Accessories: Sterling Silver and Gold, Beaded and Trendy, Accessories\nSmall Kitchen Appliances/Housewares: Food Prep\nBooks: Children, Young Adult, Cookbooks, Coffee Table/Art Books, History"
+  },
+  {
+    "id": "2329-english-court",
+    "address": "2329 English Court",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9234731,
+    "lng": -122.0246825,
+    "text": "Electronics/Camera: Other\nSporting Equipment/Exercise Equipment: Individual Sport Equipment, Outdoor  and Recreational Gear: Kayaking, rock climbing, skiing, snowboarding, camping\nRecords/CDs: Vinyl\nTools: Hand Tools, Power Tools, Cutting and Boring Tools, Other\nGardening: Pots\nArt/Frames: Other\nPet/Dog Accessories/Crates etc.: Toys and Entertainment"
+  },
+  {
+    "id": "2939-cedro-lane",
+    "address": "2939 Cedro Lane",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.92153,
+    "lng": -122.0121173,
+    "text": "Electronics/Camera: Consumer Electronics: smart phones, laptops, computers etc\nSporting Equipment/Exercise Equipment: Apparel & Footwear, Individual Sport Equipment, Team Sports Equipment, Outdoor  and Recreational Gear: Kayaking, rock climbing, skiing, snowboarding, camping\nToys/Games and Arts and Crafts: Puzzles, STEM and Scientific Kits\nChildren's / Teen Clothing: Children's Clothing\nAdult Clothing: Women's Shoes, Men's Shoes, Men's Clothing, Women's Clothing\nRecords/CDs: CDs\nJewelry and Accessories: Vintage Costume Jewelry\nArt/Frames: Vintage and Ornate Frames, Other\nSmall Kitchen Appliances/Housewares: Cooking and Air Frying, Food Prep, Other\nBooks: Adult Mystery and Thrillers, Children, Young Adult, Cookbooks, History, Biographies/Autobiographies\nMiscellaneous Items: Video Games, Vases, goblets, shot glasses, mugs, dishes, platters, pts, pans, trays, rice cooker, steamer, picture frames, Oakland A's souvenirs (t-shirts, blankets, towels)\nSewing/Quiliting/Ribbon: Crochet\nBedding: Blankets, Pillows\nBath Accessories: Miscellaneous Bath\nHoliday/Party/Decorations: Ribbons, bow, Christmas ornaments and table decorations, B-day, Summer Party centerpieces, tablecloths,\nTravel: Bags\nOffice: binders, dividers, index cards, foam cups, pens, paper, notebooks, desk organizers, filing trays"
+  },
+  {
+    "id": "2972-hurlstone-ct",
+    "address": "2972 Hurlstone Ct",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9152434,
+    "lng": -122.0100702,
+    "text": "Indoor Furniture: Bedroom, Home Office\nOutdoor Patio: Other\nSporting Equipment/Exercise Equipment: Individual Sport Equipment, Golf Clubs/Equipment\nTools: Cutting and Boring Tools\nGardening: Pots\nBBQ/BBQ Accessories: Grills and Smokers"
+  },
+  {
+    "id": "450-blackstone-court",
+    "address": "450 Blackstone Court",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9164939,
+    "lng": -122.025511,
+    "text": "Indoor Furniture: Living Room, Bedroom, Home Office\nOutdoor Patio: Dining\nSporting Equipment/Exercise Equipment: Individual Sport Equipment, Training & Fitness Equipment: weights, Treadmills, exercise bikes, mats, kettle bells\nBaby Equipment: Play and Activity\nBaby clothes: Other\nToys/Games and Arts and Crafts: Puzzles, Building and Construction Blocks, STEM and Scientific Kits, Language and Literacy\nChildren's / Teen Clothing: Children's Clothing\nTools: Other\nGardening: Garden Tools\nArt/Frames: Landscapes and Botanicals, Framed Prints and Posters, Art Supplies\nSmall Kitchen Appliances/Housewares: Cooking and Air Frying, Food Prep, Other\nBBQ/BBQ Accessories: Grilling Tools and Utensils, Cookware and Prep, Other"
+  },
+  {
+    "id": "1066-chippewa-court",
+    "address": "1066 chippewa court",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.906372,
+    "lng": -122.0190045,
+    "text": "Sporting Equipment/Exercise Equipment: Individual Sport Equipment\nAdult Clothing: Men's Shoes, Men's Clothing\nTools: Hand Tools, Mechanic Tool Sets, Other\nGardening: Plants\nMiscellaneous Items: Tool storage cabinet, pre-treated walnut 2x4s\nHoliday/Party/Decorations: Animated Halloween dog"
+  },
+  {
+    "id": "3030-ebano-drive",
+    "address": "3030 Ebano Drive",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9203062,
+    "lng": -122.0196165,
+    "text": "Electronics/Camera: Entertainment Electronics: TVs, soundbars, stereo systems, video game consoles, and streaming devices\nIndoor Furniture: Living Room, Bedroom, Home Office\nToys/Games and Arts and Crafts: Puzzles, Building and Construction Blocks, Role-Playing and Pretend Toys, Musical Instruments, Arts and Crafts\nChildren's / Teen Clothing: Teen Clothing\nAdult Clothing: Women's Shoes, Men's Clothing, Women's Clothing\nGardening: Garden Tools, Pots\nArt/Frames: Framed Prints and Posters, Art Supplies\nSmall Kitchen Appliances/Housewares: Other\nPet/Dog Accessories/Crates etc.: For Dogs\nBedding: Pillows\nOffice: Shredder"
+  },
+  {
+    "id": "989-snyder-lane",
+    "address": "989 Snyder Lane",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9087278,
+    "lng": -122.0149302,
+    "text": ""
+  },
+  {
+    "id": "983-snyder-lane",
+    "address": "983 Snyder Lane",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.90899,
+    "lng": -122.0149314,
+    "text": ""
+  },
+  {
+    "id": "2172-angus-dr",
+    "address": "2172 Angus Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9189196,
+    "lng": -122.0261223,
+    "text": "Electronics/Camera: Video cameras, TV\nIndoor Furniture: 2 Rocking Chairs, Wall Clock, File Cabinet. Kohler towel bar\nSporting Equipment/Exercise Equipment: Inflatable mattress with mattress pad, Bike racks: 2-bike floor rack, car rack, Bike pump, Golf cart, Tackle box and fishing gear, NEW camp stove, Luggage rack, Baseball mitts, frisbees\nBaby Equipment: Mini crib with all bedding, bumpers and blanket\nToys/Games and Arts and Crafts: Games, puzzles, toys (Transformers) Cribbage boards\nRecords/CDs: CDs\nMovies/DVDs etc.: DVDS, Blank VCR tapes\nGardening: Decoy plastic coyote (does not scare squirrels), Gardening toos, small pocket hose, Hudson sprayer, Wheelbarrow, Mole trap\nAuto Parts: Automotive Tools, floor jack, timing light, torque wrench, 5 gallon gas cans and hand pump\nArt/Frames: Wall mirrors and wall hangings\nSmall Kitchen Appliances/Housewares: Spice Rack, Assorted kitchenware, Popcorn popper with popcorn boxes, 15 Hexagonal jars with lids, cupcake tote, condiment server, chafing dish, meat frinder\nBooks: Books, Scrapbooks\nMiscellaneous Items: Louvred doors, Bunge cord, extension cord, rope, Fireplace tool set, light bulbs, propane heater, small furniture dolly"
+  },
+  {
+    "id": "2107-asenath-ct",
+    "address": "2107 Asenath Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9188151,
+    "lng": -122.0281672,
+    "text": ""
+  },
+  {
+    "id": "741-autumn-dr",
+    "address": "741 Autumn Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9136908,
+    "lng": -122.0225614,
+    "text": "Electronics/Camera: Cameras\nIndoor Furniture: Clocks\nGardening: Plants, small and large\nMiscellaneous Items: Anitiques, Vinatage"
+  },
+  {
+    "id": "808-autumn-dr",
+    "address": "808 Autumn Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9122114,
+    "lng": -122.0225543,
+    "text": "Toys/Games and Arts and Crafts: Toys\nChildren's / Teen Clothing: Preteen and Teen clothing\nAdult Clothing: Adult Clothing\nTools: Tools\nSmall Kitchen Appliances/Housewares: Homegoods\nBooks: Comic Books\nModels/Collectibles/Trading Cards: Collectibles, Comic Books"
+  },
+  {
+    "id": "2010-belford-dr",
+    "address": "2010 Belford Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9201639,
+    "lng": -122.0321837,
+    "text": ""
+  },
+  {
+    "id": "2426-belford-dr",
+    "address": "2426 Belford Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9232308,
+    "lng": -122.023399,
+    "text": "Electronics/Camera: Computer Keyboards, Video game consoles\nIndoor Furniture: Furniture items, lighting\nToys/Games and Arts and Crafts: Action figures/toys\nArt/Frames: Paintings\nBooks: Cookbooks\nPet/Dog Accessories/Crates etc.: Dog House, Dog accessories"
+  },
+  {
+    "id": "136-bexley-pl",
+    "address": "136 Bexley Pl.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.928508,
+    "lng": -122.0057509,
+    "text": "Sporting Equipment/Exercise Equipment: Bikes\nToys/Games and Arts and Crafts: Pocelain dolls, crafts, craft supplies\nChildren's / Teen Clothing: Women's junior clothes\nAdult Clothing: Women's Hiking Boots, Women's Clothes\nAuto Parts: Truck Rims- Great Condition  19 inches\nArt/Frames: Framed prints and posters, wall frames\nSmall Kitchen Appliances/Housewares: Keurig, small kitchen appliances, mini firdge\nBooks: Books\nHoliday/Party/Decorations: Home Decor"
+  },
+  {
+    "id": "2226-blackstone-dr",
+    "address": "2226 Blackstone Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9182119,
+    "lng": -122.0245011,
+    "text": "Sporting Equipment/Exercise Equipment: Diving fins, snorkle\nToys/Games and Arts and Crafts: Games, poker chips, Jigsaw puzzles\nRecords/CDs: Christmas music CDs, Blank audio CDs\nAuto Parts: Car Floor Mats - Tesla 3\nSmall Kitchen Appliances/Housewares: Electric Wine opener, Bamboo Steamer,\nPet/Dog Accessories/Crates etc.: Pet Ramp\nMiscellaneous Items: Covid masks (sealed)\nBedding: Sheets/drop cloths\nBath Accessories: Bath size towels"
+  },
+  {
+    "id": "2233-cascade-dr",
+    "address": "2233 Cascade Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9143879,
+    "lng": -122.0232199,
+    "text": "Electronics/Camera: 35 mm Canon R Lens f 1.4\nSporting Equipment/Exercise Equipment: Sports equipement, Golf Clubs - Adult and Kids, Youth Hockey skates\nChildren's / Teen Clothing: Children's clothing, Fancy gowns\nAdult Clothing: Women's clothing, Men's clothing\nArt/Frames: Art work\nSmall Kitchen Appliances/Housewares: Kitchen/dining items\nBooks: Books"
+  },
+  {
+    "id": "2418-cascade-dr",
+    "address": "2418 Cascade Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9142378,
+    "lng": -122.020389,
+    "text": "Indoor Furniture: decorative shelves, hardware\nOutdoor Patio: Heavy Metal Umbrella Stand, 6 foot Umbrella, La Fuma Zero Gravity Lounger, 2 Tier Rustic Fountain\nSporting Equipment/Exercise Equipment: Sleeping bags, backpacks, Coleman Camp Stove, Coleman Lantern and Case, Lantern stand, White Stag Dom Tent, Euerka Family Tent, Vintage Golf Clubs and bag,\nGardening: 28 Succulents, Plug-in hedge trimmer, Toro Rototiller, B&D Edger, Rechargeable grass shears, stone wall planter,\nAuto Parts: Floor Jack\nSmall Kitchen Appliances/Housewares: Canning jars,\nMiscellaneous Items: OddJob Concrete Mixing Tud and Forms, Wood Bi-fold Doors, FREE Items\nSewing/Quiliting/Ribbon: sewing and quilting Misc\nOffice: Letter holder, magazine holder,"
+  },
+  {
+    "id": "2515-cascade-dr",
+    "address": "2515 Cascade Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9137279,
+    "lng": -122.0191108,
+    "text": "Gardening: Plants. Garden Misc.\nSmall Kitchen Appliances/Housewares: Kitchen stuff\nMiscellaneous Items: Kids stuff"
+  },
+  {
+    "id": "2681-cassandra-ct",
+    "address": "2681 Cassandra Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9126458,
+    "lng": -122.0153178,
+    "text": "Sporting Equipment/Exercise Equipment: Golf Equipment\nAdult Clothing: Clothing\nRecords/CDs: Albums, CDs\nMovies/DVDs etc.: DVDs\nBooks: Books\nMiscellaneous Items: Miscellaneous"
+  },
+  {
+    "id": "783-cattail-ct",
+    "address": "783 Cattail Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9156874,
+    "lng": -122.0023982,
+    "text": ""
+  },
+  {
+    "id": "111-clyde-dr",
+    "address": "111 Clyde Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9230684,
+    "lng": -122.0258298,
+    "text": "Adult Clothing: Women's Clothes. Men's shirts. Men's outerwear\nSmall Kitchen Appliances/Housewares: Flower vases, kitchenware, small kitchen items, nightstand clock\nHoliday/Party/Decorations: Misc gift decorations, misc gift cards"
+  },
+  {
+    "id": "2226-comistas-dr",
+    "address": "2226 Comistas Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9097219,
+    "lng": -122.0232225,
+    "text": ""
+  },
+  {
+    "id": "628-creekmore-ct",
+    "address": "628 Creekmore Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9162613,
+    "lng": -122.0096766,
+    "text": ""
+  },
+  {
+    "id": "188-dunblane-dr",
+    "address": "188 Dunblane Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.920553,
+    "lng": -122.0296431,
+    "text": ""
+  },
+  {
+    "id": "245-ebano-dr",
+    "address": "245 Ebano Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9214412,
+    "lng": -122.0203667,
+    "text": "Indoor Furniture: Vintage Lamps, Home Decor, Vintage Drop leaf table\nOutdoor Patio: New 10x30 outdoor Canopy\nArt/Frames: Pictures/Frames\nSmall Kitchen Appliances/Housewares: Inherited glassware, Inherited dish/serveware, pots and pans\nModels/Collectibles/Trading Cards: Collectibles\nMiscellaneous Items: Suitcases, much more\nSewing/Quiliting/Ribbon: Singer table top sewing machine, attachments for sewing machine"
+  },
+  {
+    "id": "3039-ebano-dr",
+    "address": "3039 Ebano Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9199744,
+    "lng": -122.0189325,
+    "text": ""
+  },
+  {
+    "id": "3107-ebano-dr",
+    "address": "3107 Ebano Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9163903,
+    "lng": -122.0173952,
+    "text": ""
+  },
+  {
+    "id": "3139-ebano-dr",
+    "address": "3139 Ebano Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9149365,
+    "lng": -122.0177715,
+    "text": ""
+  },
+  {
+    "id": "2250-english-ct",
+    "address": "2250 English Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.923455,
+    "lng": -122.0271092,
+    "text": ""
+  },
+  {
+    "id": "3536-eris-ct",
+    "address": "3536 Eris Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9139824,
+    "lng": -122.0012865,
+    "text": ""
+  },
+  {
+    "id": "418-kirby-ct",
+    "address": "418 Kirby Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9202951,
+    "lng": -122.0082085,
+    "text": "Electronics/Camera: Ink-Jet Printer,\nIndoor Furniture: Bar Stools, Dining chairs\nSporting Equipment/Exercise Equipment: Sport net, sports gear\nToys/Games and Arts and Crafts: Monopoly, Arts and Crafts, Scrapbook Paper,Stickers\nAdult Clothing: Clothes\nMusical Instruments/equipment: Music Stand\nSmall Kitchen Appliances/Housewares: Pots and Pans, Food Steamer, Electric Wok\nBooks: Chinese children's books\nMiscellaneous Items: Foot Massager\nSewing/Quiliting/Ribbon: Fabric Remnants, Sewing accessories\nBath Accessories: Soap dispenser"
+  },
+  {
+    "id": "3175-kirby-ln",
+    "address": "3175 Kirby Ln.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.919617,
+    "lng": -122.0086751,
+    "text": ""
+  },
+  {
+    "id": "239-langlie-ct",
+    "address": "239 Langlie Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9247201,
+    "lng": -122.0099403,
+    "text": ""
+  },
+  {
+    "id": "207-las-lomas-way",
+    "address": "207 Las Lomas Way",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.912394,
+    "lng": -122.0267061,
+    "text": "Sporting Equipment/Exercise Equipment: Camping\nSmall Kitchen Appliances/Housewares: Knives\nModels/Collectibles/Trading Cards: Anime Figures, Pokemon Cards, Digimon Cards\nMiscellaneous Items: Martial art sticks, FREE stuff\nSewing/Quiliting/Ribbon: Quilt Fabric"
+  },
+  {
+    "id": "277-las-lomas-way",
+    "address": "277 Las Lomas Way",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9107854,
+    "lng": -122.0262332,
+    "text": "Adult Clothing: Clothing, Golf Polos, Shoes\nJewelry and Accessories: Baseball Hats, Golf Hats\nSmall Kitchen Appliances/Housewares: Bowls/Dishes\nModels/Collectibles/Trading Cards: Sports cards. Sports Memorabilia, collectibles"
+  },
+  {
+    "id": "409-las-lomas-way",
+    "address": "409 Las Lomas Way",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9086199,
+    "lng": -122.0263288,
+    "text": ""
+  },
+  {
+    "id": "2305-lomond-ln",
+    "address": "2305 Lomond Ln.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9168811,
+    "lng": -122.0229474,
+    "text": ""
+  },
+  {
+    "id": "2427-lomond-ln",
+    "address": "2427 Lomond Ln.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9164736,
+    "lng": -122.0205339,
+    "text": ""
+  },
+  {
+    "id": "771-merrick-ct",
+    "address": "771 Merrick Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9157747,
+    "lng": -121.9998174,
+    "text": ""
+  },
+  {
+    "id": "48-mi-elana-ct",
+    "address": "48 Mi Elana Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.919754,
+    "lng": -122.0128523,
+    "text": ""
+  },
+  {
+    "id": "915-natchez-dr",
+    "address": "915 Natchez Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9111383,
+    "lng": -122.017476,
+    "text": "Indoor Furniture: 6 Dining Chairs\nSporting Equipment/Exercise Equipment: Electric Exercise Bike, Bicycle Helmet, Horse Riding Helmet\nSmall Kitchen Appliances/Housewares: Fire Place Tools\nBBQ/BBQ Accessories: Weber Gas Grill"
+  },
+  {
+    "id": "851-northgate-rd",
+    "address": "851 Northgate Rd.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9081295,
+    "lng": -121.9963266,
+    "text": "Electronics/Camera: TVs with wall mounts\nIndoor Furniture: Indoor\nOutdoor Patio: Outdoor pieces\nTools: Quality Tools\nGardening: Riding Lawn Mower\nJewelry and Accessories: Costume Jewelry\nArt/Frames: Fine Art\nSmall Kitchen Appliances/Housewares: Household goods\nPet/Dog Accessories/Crates etc.: Fish Tank\nModels/Collectibles/Trading Cards: G Scale Trains"
+  },
+  {
+    "id": "406-pazzi-rd",
+    "address": "406 Pazzi Rd.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9217238,
+    "lng": -122.0031344,
+    "text": ""
+  },
+  {
+    "id": "2764-pontiac-dr",
+    "address": "2764 Pontiac Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9089711,
+    "lng": -122.0124931,
+    "text": ""
+  },
+  {
+    "id": "2330-quiet-place-dr",
+    "address": "2330 Quiet Place Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9114726,
+    "lng": -122.0217846,
+    "text": "Electronics/Camera: Robot vacuum\nSporting Equipment/Exercise Equipment: Yakima Accessories, strider bike\nToys/Games and Arts and Crafts: Board Games, Harry Potter Toys\nChildren's / Teen Clothing: Kids clothes\nRecords/CDs: Vintage Vinyls: Rock, R&B, Jazz\nSmall Kitchen Appliances/Housewares: Charcuterie Board and set, Nordic ware pans\nModels/Collectibles/Trading Cards: Die Cast Cars, 1970s to 2000s"
+  },
+  {
+    "id": "2622-quiet-place-dr",
+    "address": "2622 Quiet Place Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9120073,
+    "lng": -122.0170802,
+    "text": ""
+  },
+  {
+    "id": "2672-quiet-place-dr",
+    "address": "2672 Quiet Place Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9116626,
+    "lng": -122.0155346,
+    "text": "Electronics/Camera: Audio Equipment, Video Games, Flat Screen TV, Projectors, CD player and Electronic Accessories\nSporting Equipment/Exercise Equipment: Junior Golf Club Set & Bag, Skis and Ski Poles, Tennis Rackets, Wet Suits, Flippers, Snorkle Gear, Scooter, Penny Board, Camping Gear\nToys/Games and Arts and Crafts: Puzzles and Board Games, Toys, Stuffed animals\nAdult Clothing: Women's clothing\nMusical Instruments/equipment: Flute, Audio Equipment\nRecords/CDs: K-Pop Albums, CD Player\nMovies/DVDs etc.: DVDs, VHS tapes\nJewelry and Accessories: Jewelry, Crystals\nSmall Kitchen Appliances/Housewares: Kitchen appliances, gadgets, Pans, Pots, Mugs\nBooks: Books\nPet/Dog Accessories/Crates etc.: Fish Tanks"
+  },
+  {
+    "id": "2315-rubicon-ct",
+    "address": "2315 Rubicon Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9193553,
+    "lng": -122.0232328,
+    "text": ""
+  },
+  {
+    "id": "2928-san-antonio-dr",
+    "address": "2928 San Antonio Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9099609,
+    "lng": -122.0276258,
+    "text": "Indoor Furniture: Bedroom furniture, Tiffany style lams, side table\nToys/Games and Arts and Crafts: Stuffed animals\nAdult Clothing: Women's clothing, Scrubs, shoes\nSmall Kitchen Appliances/Housewares: Kitchen Items, Room Decor, Vases, pots\nBooks: Books\nMiscellaneous Items: Knick-knacks\nBedding: Throw pillows\nHoliday/Party/Decorations: Room Decor, Candles"
+  },
+  {
+    "id": "1011-seneca-ct",
+    "address": "1011 Seneca Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9066499,
+    "lng": -122.0170981,
+    "text": "Electronics/Camera: Older tv and stand\nSporting Equipment/Exercise Equipment: Brand new girls Bike\nToys/Games and Arts and Crafts: Stuffed animals, toys\nAdult Clothing: Clothes, shoes\nJewelry and Accessories: Purses: regular and designer, Hats\nArt/Frames: Decorative Pieces\nSmall Kitchen Appliances/Housewares: Kitchen items, Household items\nModels/Collectibles/Trading Cards: Anime Statue, Pokemon and One Piece Cards\nMiscellaneous Items: Miscellaneous and LOTS MORE\nHoliday/Party/Decorations: Candles"
+  },
+  {
+    "id": "3617-shukla-ct",
+    "address": "3617 Shukla Ct.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.913419,
+    "lng": -121.9977958,
+    "text": ""
+  },
+  {
+    "id": "987-springfield-dr",
+    "address": "987 Springfield Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9097417,
+    "lng": -122.0217189,
+    "text": ""
+  },
+  {
+    "id": "3064-stinson-cir",
+    "address": "3064 Stinson Cir.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9275074,
+    "lng": -122.0132559,
+    "text": ""
+  },
+  {
+    "id": "3185-stinson-cir",
+    "address": "3185 Stinson Cir.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9259855,
+    "lng": -122.0108358,
+    "text": "Sporting Equipment/Exercise Equipment: Camping\nTools: LOTS of Tools, nuts and bolts, Power Tools, Table Saw, Welding Equipment, Welder, Tool Box, Hand Tools, Compressor\nSmall Kitchen Appliances/Housewares: Household goods\nBooks: Kids Books"
+  },
+  {
+    "id": "880-stonehaven-dr",
+    "address": "880 Stonehaven Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9110844,
+    "lng": -122.0078989,
+    "text": "Electronics/Camera: 27\" Samsung Color TV w/remote, 1000' Network Comm Cable\nIndoor Furniture: 3 piece bedroom night stands, Wooden Child's School Desk\nSporting Equipment/Exercise Equipment: Small Flashlights\nTools: 1750 psi 3.75 hp Pressure Washer, 125 psi Craftsman Air Compressor\nGardening: Flower pots, garden hoses\nArt/Frames: 3000 white wine Bottle Corks, John Barber Artist's Proof, Antique diretional weather vane.\nSmall Kitchen Appliances/Housewares: Antique hand meat grinder, Antique iron hot pads (2), antique wooden coffee grinder,\nMiscellaneous Items: 6 Large Water Resistant Tarps, 2 94\"-35\" Winsharp Blinds, Sargent SS Door hardware, Chainlink Fence hardware, Antique iron door stop (3)\nOffice: Office Supplies"
+  },
+  {
+    "id": "774-sutton-dr",
+    "address": "774 Sutton Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9140224,
+    "lng": -121.9987411,
+    "text": "Electronics/Camera: Electronics, household electronics\nIndoor Furniture: furniture\nSporting Equipment/Exercise Equipment: Sports equipment, bikes, scooters,camping equipment\nToys/Games and Arts and Crafts: Pokemon and other TCG cards\nChildren's / Teen Clothing: Kids clothes and shoes\nAdult Clothing: Adult clothes and shoes\nJewelry and Accessories: Costume jewelry, fashion accessories\nArt/Frames: Art and decor\nSmall Kitchen Appliances/Housewares: Housewares, dishes"
+  },
+  {
+    "id": "254-tamarisk-dr",
+    "address": "254 Tamarisk Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9252585,
+    "lng": -122.0068946,
+    "text": ""
+  },
+  {
+    "id": "284-tamarisk-dr",
+    "address": "284 Tamarisk Dr.",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9240657,
+    "lng": -122.0073457,
+    "text": "Electronics/Camera: iPhone, iPad, Blu-Ray Player\nIndoor Furniture: 4 inch Queen Box Spring,\nSporting Equipment/Exercise Equipment: Tennis Balls-cans\nToys/Games and Arts and Crafts: Puzzles, Scrapbooking Items\nAdult Clothing: Clothing\nMovies/DVDs etc.: Blu-Ray Player\nSmall Kitchen Appliances/Housewares: Glassware, Ovenware\nPet/Dog Accessories/Crates etc.: Dog toys, Dog Accessories\nHoliday/Party/Decorations: Home Decor, Holiday items. Halloween Costumes"
   },
   {
     "id": "2506-v-a-verde",
-    "address": "2506 V\u00eda Verde",
-    "lat": null,
-    "lng": null
+    "address": "2506 Vía Verde",
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9225608,
+    "lng": -122.0225197,
+    "text": ""
   },
   {
     "id": "1473-walnut-ave",
     "address": "1473 Walnut Ave.",
-    "lat": null,
-    "lng": null
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9140579,
+    "lng": -122.0082411,
+    "text": ""
   },
   {
     "id": "397-warwick-dr",
     "address": "397 Warwick Dr.",
-    "lat": null,
-    "lng": null
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9151022,
+    "lng": -122.0289282,
+    "text": ""
   },
   {
     "id": "3385-whitehaven-dr",
     "address": "3385 Whitehaven Dr.",
-    "lat": null,
-    "lng": null
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9145546,
+    "lng": -122.0029694,
+    "text": ""
   },
   {
     "id": "1114-wiget-ln",
     "address": "1114 Wiget Ln.",
-    "lat": null,
-    "lng": null
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9073092,
+    "lng": -122.0200968,
+    "text": ""
   },
   {
     "id": "3347-withersed-ln",
     "address": "3347 Withersed Ln.",
-    "lat": null,
-    "lng": null
+    "city": "Walnut Creek",
+    "zip": "94598",
+    "lat": 37.9191063,
+    "lng": -122.0055981,
+    "text": ""
   }
 ]

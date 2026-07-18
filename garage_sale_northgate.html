@@ -86,18 +86,6 @@
     .ctrl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .ctrl-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 
-    #geocode-status {
-      font-size: 11px;
-      color: #92400e;
-      background: #fefce8;
-      border: 1px solid #fde68a;
-      border-radius: 6px;
-      padding: 6px 8px;
-      margin-bottom: 10px;
-      display: none;
-    }
-    #geocode-status.active { display: block; }
-
     /* ============================================================
        Pins
     ============================================================ */
@@ -128,6 +116,14 @@
       display: inline-block; background: #dbeafe; color: #1e40af;
       font-size: 11px; font-weight: 700; padding: 2px 7px;
       border-radius: 10px; margin-bottom: 8px;
+    }
+
+    .popup-items {
+      color: #374151; font-size: 12px; line-height: 1.5;
+      max-height: 130px; overflow-y: auto;
+      white-space: pre-wrap; margin: 8px 0;
+      background: #f9fafb; border: 1px solid #e5e7eb;
+      border-radius: 6px; padding: 6px 8px;
     }
 
     /* Notes section — yellow-tinted */
@@ -183,8 +179,6 @@
         Walnut Creek, CA · 81 addresses
       </div>
 
-      <div id="geocode-status"></div>
-
       <div class="ctrl-row">
         <label>
           <input type="checkbox" id="show-removed" onchange="onShowRemovedChange()">
@@ -205,9 +199,9 @@
 
       <div class="section-label" style="margin-top:10px">Source</div>
       <div style="font-size:11px;color:#6b7280;line-height:1.5">
-        Address list from
-        <a href="https://torreyteamrealestate.com/2026-35th-annual-northgate-neighborhood-garage-sale/" target="_blank" rel="noopener">Torrey Team Real Estate</a>.
-        Last-minute additions/cancellations are expected — neither Torrey Team nor Compass benefit financially from this event.
+        Address list and item descriptions from the sign-up form for
+        <a href="https://torreyteamrealestate.com/2026-35th-annual-northgate-neighborhood-garage-sale/" target="_blank" rel="noopener">Torrey Team Real Estate</a>'s
+        event. Last-minute additions/cancellations are expected — neither Torrey Team nor Compass benefit financially from this event.
       </div>
     </div>
   </div>
@@ -227,8 +221,7 @@
       appId:             "1:636926285570:web:07bb863c19a7f8a4c5541b",
     }));
 
-    const STATE_COLL   = collection(db, "garage_sale_northgate", "2026", "entries");
-    const GEOCODE_COLL = collection(db, "garage_sale_northgate", "2026", "geocode");
+    const STATE_COLL = collection(db, "garage_sale_northgate", "2026", "entries");
 
     window.GS_FB = {
       subscribe(cb) {
@@ -236,20 +229,10 @@
           const entries = {};
           snap.forEach(d => { entries[d.id] = d.data(); });
           cb(entries);
-        }, err => console.error("Firestore error (state):", err));
+        }, err => console.error("Firestore error:", err));
       },
       async save(id, data) {
         await setDoc(doc(STATE_COLL, id), data);
-      },
-      subscribeGeocode(cb) {
-        return onSnapshot(GEOCODE_COLL, snap => {
-          const entries = {};
-          snap.forEach(d => { entries[d.id] = d.data(); });
-          cb(entries);
-        }, err => console.error("Firestore error (geocode):", err));
-      },
-      async saveGeocode(id, data) {
-        await setDoc(doc(GEOCODE_COLL, id), data);
       },
     };
     window.dispatchEvent(new Event("gs-fb-ready"));
@@ -262,13 +245,10 @@
   // ============================================================
   // CONFIG
   // ============================================================
-  const DATA_URL   = "garage_sales/northgate_2026_addresses.json";
-  const STATE_KEY  = "gs_northgate_2026";
-  const GEOCODE_KEY = "gs_northgate_2026_geocode";
+  const DATA_URL  = "garage_sales/northgate_2026_addresses.json";
+  const STATE_KEY = "gs_northgate_2026";
   const MAP_CENTER = [37.912, -122.045]; // Northgate neighborhood, Walnut Creek
   const MAP_ZOOM   = 14;
-  const GEOCODE_CITY_STATE = "Walnut Creek, CA";
-  const GEOCODE_DELAY_MS = 1100; // Nominatim fair-use: max 1 req/sec
 
   const STAR_LEVELS = [
     { stars: 1, label: "Good",     color: "#f59e0b", size: 14 },
@@ -306,19 +286,6 @@
   }
 
   // ============================================================
-  // GEOCODE CACHE — lat/lng per address, persisted to localStorage + Firebase
-  // ============================================================
-  let geocodeCache = {};
-
-  function loadGeocodeCache() {
-    try { geocodeCache = JSON.parse(localStorage.getItem(GEOCODE_KEY) || "{}"); }
-    catch { geocodeCache = {}; }
-  }
-  function saveGeocodeCache() {
-    localStorage.setItem(GEOCODE_KEY, JSON.stringify(geocodeCache));
-  }
-
-  // ============================================================
   // FIREBASE SYNC
   // ============================================================
   let notesSaveTimer = null;
@@ -329,20 +296,6 @@
       saveState();
       for (const id of Object.keys(markers)) refreshMarker(id);
       if (activeSaleId) refreshPopup(activeSaleId);
-    });
-    GS_FB.subscribeGeocode(entries => {
-      let changed = false;
-      for (const [id, data] of Object.entries(entries)) {
-        if (data && data.lat != null && data.lng != null) {
-          if (!geocodeCache[id]) changed = true;
-          geocodeCache[id] = { lat: data.lat, lng: data.lng };
-        }
-      }
-      if (changed) {
-        saveGeocodeCache();
-        placeAllMarkers();
-        maybeStartGeocoding();
-      }
     });
   }
 
@@ -451,6 +404,7 @@
       <div class="sale-popup">
         <div class="popup-address">${esc(sale.address)}</div>
         ${sale.infoCenter ? `<div class="popup-info-badge">ℹ️ Info Center</div>` : ""}
+        ${sale.text ? `<div class="popup-items">${esc(sale.text)}</div>` : ""}
 
         <div class="popup-notes-section">
           <div class="popup-section-label">My notes</div>
@@ -524,102 +478,12 @@
   }
 
   // ============================================================
-  // CLIENT-SIDE GEOCODING (Nominatim)
-  // Runs in the visitor's browser — one address at a time, 1/sec,
-  // caching every result to Firebase so it's a one-time cost overall.
-  // ============================================================
-  let geocoding = false;
-
-  async function geocodeAddress(address) {
-    const q = `${address}, ${GEOCODE_CITY_STATE}`;
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
-    const res = await fetch(url, { headers: { "Accept": "application/json" } });
-    const data = await res.json();
-    if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-    return null;
-  }
-
-  function setGeocodeStatus(text) {
-    const el = document.getElementById("geocode-status");
-    if (!text) { el.classList.remove("active"); el.textContent = ""; return; }
-    el.classList.add("active");
-    el.textContent = text;
-  }
-
-  async function maybeStartGeocoding() {
-    if (geocoding) return;
-    const todo = Object.values(salesById).filter(s => !geocodeCache[s.id]);
-    if (todo.length === 0) { setGeocodeStatus(""); return; }
-    geocoding = true;
-    let done = 0;
-    const total = todo.length;
-    for (const sale of todo) {
-      if (geocodeCache[sale.id]) continue; // may have been filled by another tab via Firestore
-      setGeocodeStatus(`📍 Locating addresses… ${done}/${total}`);
-      try {
-        const result = await geocodeAddress(sale.address);
-        if (result) {
-          geocodeCache[sale.id] = result;
-          saveGeocodeCache();
-          placeMarker(sale, result);
-          if (window.GS_FB) GS_FB.saveGeocode(sale.id, result);
-        }
-      } catch (e) {
-        console.warn("geocode failed for", sale.address, e);
-      }
-      done++;
-      await new Promise(r => setTimeout(r, GEOCODE_DELAY_MS));
-    }
-    geocoding = false;
-    setGeocodeStatus("");
-  }
-
-  // ============================================================
-  // MARKER PLACEMENT
-  // ============================================================
-  let hasFitBounds = false;
-
-  function placeMarker(sale, latlng) {
-    if (markers[sale.id]) return;
-    const marker = L.marker([latlng.lat, latlng.lng], {
-      icon:  makeIcon(sale.id),
-      title: sale.address,
-    });
-    marker.bindPopup(() => makePopupContent(sale), { maxWidth: 320, minWidth: 240 });
-    marker.on("popupopen",  () => { activeSaleId = sale.id; });
-    marker.on("popupclose", () => { if (activeSaleId === sale.id) activeSaleId = null; });
-    markers[sale.id] = marker;
-    if (passesFilter(sale)) marker.addTo(map);
-    fitBoundsIfNeeded();
-  }
-
-  function placeAllMarkers() {
-    for (const sale of Object.values(salesById)) {
-      const cached = geocodeCache[sale.id];
-      if (cached) placeMarker(sale, cached);
-    }
-    fitBoundsIfNeeded();
-  }
-
-  // Fit the map to the markers once, the first time we have enough of them
-  // to be a meaningful view — after that, leave the user's pan/zoom alone.
-  function fitBoundsIfNeeded() {
-    if (hasFitBounds) return;
-    const count = Object.keys(markers).length;
-    if (count < 5) return;
-    hasFitBounds = true;
-    const group = L.featureGroup(Object.values(markers));
-    map.fitBounds(group.getBounds().pad(0.1));
-  }
-
-  // ============================================================
   // INIT
   // ============================================================
   let map;
 
   async function init() {
     loadState();
-    loadGeocodeCache();
 
     map = L.map("map").setView(MAP_CENTER, MAP_ZOOM);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -632,7 +496,7 @@
 
     const legendRows = [
       ...STAR_LEVELS.map(l => ({ color: l.color, text: `${"★".repeat(l.stars)} ${l.label}` })),
-      { color: DEFAULT_PIN.color, text: "Not yet rated, no item list yet" },
+      { color: DEFAULT_PIN.color, text: "Not yet rated, no item list" },
       { color: DEFAULT_PIN.color, text: "Not yet rated, has item list", border: HAS_TEXT_BORDER },
       { color: DEFAULT_PIN.color, text: "Visited", border: VISITED_BORDER },
       { color: INFO_PIN.color,    text: "Info center" },
@@ -648,9 +512,28 @@
       })
       .join("");
 
-    placeAllMarkers();
+    // Every listing already has lat/lng from the sign-up sheet, so all
+    // markers can be placed immediately — no runtime geocoding needed.
+    const markerList = [];
+    for (const sale of Object.values(salesById)) {
+      if (sale.lat == null || sale.lng == null) continue;
+      const marker = L.marker([sale.lat, sale.lng], {
+        icon:  makeIcon(sale.id),
+        title: sale.address,
+      });
+      marker.bindPopup(() => makePopupContent(sale), { maxWidth: 320, minWidth: 240 });
+      marker.on("popupopen",  () => { activeSaleId = sale.id; });
+      marker.on("popupclose", () => { if (activeSaleId === sale.id) activeSaleId = null; });
+      markers[sale.id] = marker;
+      markerList.push(marker);
+    }
+
     applyFilters();
-    maybeStartGeocoding();
+
+    if (markerList.length) {
+      const group = L.featureGroup(markerList);
+      map.fitBounds(group.getBounds().pad(0.1));
+    }
   }
 
   init().catch(err => {
